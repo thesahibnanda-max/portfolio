@@ -1,0 +1,473 @@
+{
+  "profileDetails": {
+    "name": "Sahib Nanda",
+    "email": "sabbykabby12@gmail.com"
+  },
+  "projects": [
+    {
+      "name": "Relay - Multi-Agent Collaboration for AI Coding CLIs",
+      "year": 2026,
+      "link": "https://relay-sahib-nanda.vercel.app",
+      "description": [
+        "Built a single static Go binary that lets AI coding agents in separate terminals (Claude Code, Codex, GitHub Copilot CLI, Google Antigravity CLI) work as one team, handing work to each other and answering back.",
+        "Wrapped each tool in a pseudo-terminal (Unix PTY and Windows ConPTY) and exposed MCP tools for agent-to-agent messaging, while every terminal still behaves exactly like the tool itself.",
+        "Tracked each agent's busy, idle and dialog state from its own transcripts, logs and SQLite conversation database, so messages are typed only at safe moments and urgent ones interrupt a running turn.",
+        "Added global sessions across machines through a Go WebSocket server backed by PostgreSQL and MongoDB, alongside a local daemon over Unix sockets.",
+        "Kept a zero-footprint guarantee on users' tool configs, with byte-exact restore and crash recovery, verified by CI on Linux, macOS and Windows, fuzzing, and live end-to-end tests against the real tools."
+      ],
+      "technologies": [
+        "Go",
+        "MCP",
+        "PTY",
+        "ConPTY",
+        "WebSocket",
+        "SQLite",
+        "PostgreSQL",
+        "MongoDB",
+        "Uber Fx",
+        "Docker",
+        "Playwright",
+        "GitHub Actions"
+      ]
+    },
+    {
+      "name": "Distributed Bus Booking Platform",
+      "year": 2025,
+      "link": "https://github.com/thesahibnanda-max/redBus",
+      "description": [
+        "Architected an event-driven platform with 17 Go microservices.",
+        "Implemented Saga orchestration, Transactional Outbox, and Redis distributed locking.",
+        "Built Kafka-based asynchronous booking and payment workflows.",
+        "Added observability using Prometheus, Grafana, Loki and Jaeger."
+      ],
+      "technologies": [
+        "Go",
+        "Kafka",
+        "PostgreSQL",
+        "Redis",
+        "Elasticsearch",
+        "Prometheus",
+        "Grafana",
+        "Loki",
+        "Jaeger"
+      ]
+    },
+    {
+      "name": "Helios - Distributed Real-Time Streaming & Analytics Platform",
+      "year": 2025,
+      "link": "https://github.com/thesahibnanda-max/helios",
+      "description": [
+        "Built a distributed event streaming and analytics platform.",
+        "Implemented fraud detection and anomaly analysis pipelines.",
+        "Added JWT authentication, Redis idempotency and OpenTelemetry observability."
+      ],
+      "technologies": [
+        "Kafka",
+        "Apache Flink",
+        "Cassandra",
+        "ClickHouse",
+        "gRPC",
+        "Protocol Buffers",
+        "Redis",
+        "OpenTelemetry",
+        "Prometheus",
+        "Grafana",
+        "Loki",
+        "Jaeger"
+      ]
+    },
+    {
+      "name": "fastclient",
+      "year": 2025,
+      "link": "https://github.com/thesahibnanda-max/fastclient",
+      "description": [
+        "Developed a high-performance HTTP client for Go.",
+        "Achieved lower latency and fewer allocations than net/http.",
+        "Implemented retry handling, idempotency and timeout composition."
+      ],
+      "technologies": [
+        "Go",
+        "fasthttp",
+        "HTTP"
+      ]
+    },
+    {
+      "name": "Automated Socket Programming in Python",
+      "year": 2024,
+      "link": "https://github.com/thesahibnanda/How-To-Preprocess-Dataset-And-Its-Importance",
+      "description": [
+        "Automated server-client communication using Python sockets.",
+        "Integrated Selenium and PyTest for automation."
+      ],
+      "technologies": [
+        "Python",
+        "Socket Programming",
+        "Selenium",
+        "PyTest"
+      ]
+    },
+    {
+      "name": "Melody Generator Deep Learning Website",
+      "year": 2023,
+      "link": "https://github.com/thesahibnanda/Melody_Generator_DeepLearning_Website",
+      "description": [
+        "Built a web application that generates MIDI melodies using LSTM.",
+        "Containerized deployment using Docker."
+      ],
+      "technologies": [
+        "Flask",
+        "Keras",
+        "LSTM",
+        "Docker",
+        "JavaScript",
+        "HTML",
+        "CSS"
+      ]
+    },
+    {
+      "name": "AnalytiXHero",
+      "year": 2023,
+      "link": "https://github.com/thesahibnanda/AnalytiXHero",
+      "description": [
+        "Developed a Python library for scalable exploratory data analysis."
+      ],
+      "technologies": [
+        "Python",
+        "EDA"
+      ]
+    },
+    {
+      "name": "Artificial Neural Networking Library",
+      "year": 2023,
+      "link": "https://github.com/thesahibnanda/MinorProject1",
+      "description": [
+        "Designed a reusable C++ neural network library with multiple activation functions."
+      ],
+      "technologies": [
+        "C++"
+      ]
+    },
+    {
+      "name": "NLP Disease Predictor",
+      "year": 2023,
+      "link": "https://github.com/thesahibnanda/NLP-Disease-Predictor",
+      "description": [
+        "Built an NLP disease prediction system using BERT and Random Forest.",
+        "Achieved 97% prediction accuracy."
+      ],
+      "technologies": [
+        "Python",
+        "BERT",
+        "Random Forest",
+        "NLP"
+      ]
+    }
+  ],
+  "languages": [
+    "English",
+    "Hindi",
+    "Punjabi",
+    "Sanskrit",
+    "French",
+    "Spanish"
+  ],
+  "achievements": [
+    "Microsoft Azure AI Engineer (AI-102) Certified",
+    "Top 5 among 100+ teams in CSI Hackathon 2023 (UPES)",
+    "Finalist in CSA (Cloud Security Alliance) Hackathon at UPES",
+    "Completed IBM Machine Learning & Deep Learning Specialization",
+    "Completed Imperial College London Mathematics for Machine Learning Specialization",
+    "Open-source contribution to TensorFlow Keras API",
+    "IELTS Band 7.5/9",
+    "Sports Prefect at Presidium School (2017-2019)",
+    "Participated in I.I.M.U.N. Digital Conference 4.0"
+  ],
+  "experience": [
+    {
+      "company": "CheQ",
+      "location": "Bengaluru, Karnataka, India",
+      "employmentType": "Full-time",
+      "title": "Software Development Engineer (SDE)",
+      "startDate": "2026-09",
+      "endDate": "Present",
+      "description": [
+        "Engineered a vendor-independent central event platform ingesting ~2K events per second with a 99.99% SLA.",
+        "Built configurable event transformation and enrichment pipelines, decoupling producers from downstream analytics and engagement vendors.",
+        "Designed an end-to-end event audit trail so every event is tracked from ingestion to delivery and none is lost.",
+        "Built event-driven services on RabbitMQ and GCP, backed by MySQL and MongoDB."
+      ],
+      "technologies": [
+        "NestJS",
+        "TypeScript",
+        "JavaScript",
+        "MySQL",
+        "MongoDB",
+        "GCP",
+        "RabbitMQ",
+        "Event Driven Architecture",
+        "Distributed Systems",
+        "Fintech"
+      ]
+    },
+    {
+      "company": "CRED",
+      "location": "Bengaluru, Karnataka, India",
+      "employmentType": "Full-time",
+      "title": "Software Development Engineer (SDE)",
+      "startDate": "2025-06",
+      "endDate": "2026-06",
+      "description": [
+        "Engineered a high-throughput search service in Go by migrating inter-service communication from JSON to Protocol Buffers, reducing payload size and AWS load balancer bandwidth costs by ~28%.",
+        "Architected resilient fulfillment workflows for CRED BBPS, increasing instant payment success rate from 95% to 99%.",
+        "Designed idempotent fulfillment mechanisms eliminating double-fulfillment edge cases across distributed payment flows.",
+        "Built a MySQL-backed queue orchestration system for high-throughput asynchronous payment execution.",
+        "Contributed to BBPS AutoPay infrastructure, reducing payment delinquency below 5%."
+      ],
+      "technologies": [
+        "Go",
+        "Java",
+        "Protocol Buffers",
+        "MySQL",
+        "AWS",
+        "Distributed Systems",
+        "BBPS",
+        "Payments"
+      ]
+    },
+    {
+      "company": "CRED",
+      "location": "Bengaluru, Karnataka, India",
+      "employmentType": "Internship",
+      "title": "Software Development Engineer Intern",
+      "startDate": "2024-12",
+      "endDate": "2025-05",
+      "description": [
+        "Worked on backend development using Go and Java.",
+        "Performed data analysis using Databricks, MySQL and AWS DynamoDB.",
+        "Managed AWS SQS based message queues.",
+        "Handled AWS Parameter Store and various AWS cloud services.",
+        "Performed log monitoring, cost monitoring and deployment using Jenkins."
+      ],
+      "technologies": [
+        "Go",
+        "Java",
+        "Databricks",
+        "MySQL",
+        "AWS DynamoDB",
+        "AWS SQS",
+        "AWS Parameter Store",
+        "Jenkins",
+        "AWS"
+      ]
+    },
+    {
+      "company": "CRED",
+      "location": "Bengaluru, Karnataka, India",
+      "employmentType": "Internship",
+      "title": "Software Development Engineer in Test (SDET) Intern",
+      "startDate": "2024-09",
+      "endDate": "2024-11",
+      "description": [
+        "Designed and executed automated test solutions.",
+        "Developed automation frameworks for backend and platform testing.",
+        "Performed automated API testing.",
+        "Collaborated with cross-functional teams to improve platform reliability."
+      ],
+      "technologies": [
+        "Automation Testing",
+        "REST APIs",
+        "AWS",
+        "Test Automation"
+      ]
+    },
+    {
+      "company": "PwC",
+      "location": "India",
+      "employmentType": "Internship",
+      "title": "Data Analyst Intern",
+      "startDate": "2024-02",
+      "endDate": "2024-06",
+      "description": [
+        "Worked on industry projects involving data engineering, ETL, data warehousing and data modeling.",
+        "Applied machine learning techniques and business intelligence analysis.",
+        "Performed web scraping and RDBMS operations.",
+        "Used Selenium for automation."
+      ],
+      "technologies": [
+        "Data Engineering",
+        "ETL",
+        "RDBMS",
+        "Machine Learning",
+        "Selenium",
+        "Business Intelligence"
+      ]
+    },
+    {
+      "company": "Corizo",
+      "location": "Remote",
+      "employmentType": "Internship",
+      "title": "Machine Learning Intern",
+      "startDate": "2023-08",
+      "endDate": "2023-10",
+      "description": [
+        "Performed data preprocessing and feature engineering.",
+        "Worked on NLP including vectorization techniques.",
+        "Performed image preprocessing.",
+        "Built and optimized Machine Learning and Deep Learning models."
+      ],
+      "technologies": [
+        "Machine Learning",
+        "Deep Learning",
+        "NLP",
+        "Data Preprocessing",
+        "Image Processing"
+      ]
+    },
+    {
+      "company": "Koders",
+      "location": "Dehradun, Uttarakhand, India",
+      "employmentType": "Internship",
+      "title": "Full Stack Developer Intern",
+      "startDate": "2023-07",
+      "endDate": "2023-09",
+      "description": [
+        "Developed backend services using Java (Micronaut), Spring Boot and Flask.",
+        "Implemented JWT-based authentication.",
+        "Integrated Hasura GraphQL for optimized querying.",
+        "Built frontend using Flutter."
+      ],
+      "technologies": [
+        "Java",
+        "Micronaut",
+        "Spring Boot",
+        "Flask",
+        "Flutter",
+        "JWT",
+        "Hasura",
+        "GraphQL"
+      ]
+    },
+    {
+      "company": "TatavGyan - Truth of Life",
+      "location": "Delhi, India",
+      "employmentType": "Internship",
+      "title": "Social Work Intern",
+      "startDate": "2022-06",
+      "endDate": "2022-07",
+      "description": [
+        "Led a team of 50 volunteers.",
+        "Successfully planted approximately 10,000 trees in high-pollution areas of Delhi."
+      ],
+      "technologies": [
+        "Leadership",
+        "Social Service",
+        "Team Management"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Petroleum and Energy Studies",
+      "degree": "Bachelor of Technology (B.Tech)",
+      "field": "Computer Science (AI & ML)",
+      "startDate": "2021-09",
+      "endDate": "2025-05",
+      "grade": "CGPA: 8.92/10"
+    },
+    {
+      "institution": "Prudence School",
+      "degree": "Grade XII",
+      "field": "Science (PCM)",
+      "startDate": "2020-04",
+      "endDate": "2021-03",
+      "grade": "88.8%"
+    }
+  ],
+  "skillsByCategory": {
+    "Languages": [
+      "Go",
+      "Java",
+      "Rust",
+      "Python",
+      "C",
+      "C++"
+    ],
+    "Backend": [
+      "Micronaut",
+      "Spring Boot",
+      "Flask",
+      "REST APIs",
+      "GraphQL",
+      "JWT"
+    ],
+    "Distributed Systems": [
+      "Kafka",
+      "Apache Flink",
+      "gRPC",
+      "Protocol Buffers",
+      "Avro",
+      "HTTP/2",
+      "Event Driven Architecture",
+      "AWS SQS"
+    ],
+    "Cloud": [
+      "AWS",
+      "GCP",
+      "Microsoft Azure",
+      "AWS ECS",
+      "AWS EC2",
+      "AWS DynamoDB",
+      "AWS Step Functions",
+      "AWS Parameter Store"
+    ],
+    "Databases": [
+      "MySQL",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Cassandra",
+      "Aerospike",
+      "Elasticsearch",
+      "OpenSearch"
+    ],
+    "DevOps": [
+      "Docker",
+      "Kubernetes",
+      "Terraform",
+      "GitHub Actions",
+      "Jenkins",
+      "Linux"
+    ],
+    "Workflow": [
+      "Cadence",
+      "Temporal"
+    ],
+    "Data Engineering": [
+      "Databricks",
+      "ETL",
+      "Data Warehousing",
+      "Data Modeling",
+      "Business Intelligence"
+    ],
+    "Machine Learning": [
+      "Machine Learning",
+      "Deep Learning",
+      "NLP",
+      "Image Processing",
+      "Data Preprocessing"
+    ],
+    "Testing": [
+      "Automation Testing",
+      "REST API Testing",
+      "SDET",
+      "Selenium"
+    ],
+    "AI Assisted Engineering": [
+      "Claude Code",
+      "Gemini CLI",
+      "OpenAI Codex",
+      "Cline",
+      "RooCode"
+    ]
+  }
+}

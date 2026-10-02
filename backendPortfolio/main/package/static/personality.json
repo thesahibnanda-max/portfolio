@@ -1,0 +1,202 @@
+{
+  "personalProfile": {
+    "basicInfo": {
+      "nationality": "Indian",
+      "gender": "Male",
+      "height": {
+        "feet": 6,
+        "centimeters": 183
+      }
+    },
+    "physicalAppearance": {
+      "bodyType": "Athletic",
+      "physique": "Masculine",
+      "fitnessLevel": "Well-trained",
+      "strongestMuscleGroup": "Chest",
+      "fitnessGoals": [
+        "Build muscular physique",
+        "Increase strength",
+        "Maintain athletic fitness"
+      ],
+      "hair": {
+        "color": "Black",
+        "texture": "Naturally wavy",
+        "style": "Medium length, voluminous"
+      },
+      "eyes": {
+        "color": "Black"
+      },
+      "skinTone": "Medium",
+      "face": {
+        "shape": "Oval",
+        "eyebrows": "Thick",
+        "facialHair": "Clean-shaven"
+      },
+      "accessories": {
+        "wearsGlasses": true
+      },
+      "fashion": {
+        "style": "Minimalist Casual",
+        "favoriteColors": [
+          "Black"
+        ]
+      }
+    },
+    "personality": {
+      "coreTraits": [
+        "Analytical",
+        "Logical",
+        "Disciplined",
+        "Ambitious",
+        "Competitive",
+        "Curious",
+        "Resilient",
+        "Calm Under Pressure",
+        "Adaptable",
+        "Detail Oriented",
+        "Reliable",
+        "Responsible",
+        "Continuous Learner",
+        "Growth Mindset"
+      ],
+      "professionalTraits": [
+        "Leadership",
+        "Teamwork",
+        "Ownership",
+        "Accountability",
+        "Problem Solving",
+        "Critical Thinking",
+        "Communication",
+        "Collaboration",
+        "Decision Making",
+        "Time Management",
+        "Fast Learner",
+        "Execution Focused",
+        "Engineering Excellence",
+        "Innovation"
+      ],
+      "workPreferences": {
+        "preferredDomains": [
+          "Backend Engineering",
+          "Distributed Systems",
+          "System Design",
+          "Cloud Computing",
+          "High Performance Systems",
+          "Artificial Intelligence"
+        ],
+        "engineeringValues": [
+          "Scalability",
+          "Performance",
+          "Reliability",
+          "Maintainability",
+          "Clean Architecture",
+          "Automation",
+          "Observability"
+        ]
+      },
+      "personalValues": [
+        "Integrity",
+        "Consistency",
+        "Respect",
+        "Continuous Improvement",
+        "Discipline",
+        "Excellence"
+      ]
+    },
+    "interests": {
+      "sports": {
+        "football": {
+          "favoriteTeam": "FC Barcelona",
+          "favoritePlayer": "Lionel Messi"
+        },
+        "cricket": {
+          "favoriteTeam": "India",
+          "favoritePlayer": "Virat Kohli"
+        }
+      },
+      "fitness": [
+        "Weight Training",
+        "Strength Training",
+        "Bodybuilding",
+        "General Fitness"
+      ],
+      "technology": [
+        "Backend Development",
+        "Distributed Systems",
+        "System Design",
+        "Artificial Intelligence",
+        "Open Source",
+        "Cloud Computing",
+        "Performance Engineering"
+      ]
+    },
+    "favorites": {
+      "movies": [
+        {
+          "title": "Bhaag Milkha Bhaag",
+          "genre": "Biographical Sports Drama"
+        },
+        {
+          "title": "Fight Club",
+          "genre": "Psychological Drama"
+        }
+      ],
+      "games": [
+        {
+          "title": "Red Dead Redemption 2",
+          "genre": "Open World Action Adventure"
+        },
+        {
+          "title": "Spider-Man 2",
+          "genre": "Open World Superhero Fantasy"
+        }
+      ],
+      "artists": [
+        {
+          "name": "The Weeknd",
+          "type": "Singer"
+        },
+        {
+          "name": "Karan Aujla",
+          "type": "Singer"
+        }
+      ],
+      "sportsIcons": {
+        "football": "Lionel Messi",
+        "cricket": "Virat Kohli"
+      }
+    },
+    "lifestyle": {
+      "fitnessFocused": true,
+      "sportsEnthusiast": true,
+      "technologyEnthusiast": true,
+      "continuousLearning": true
+    },
+    "languages": [
+      {
+        "name": "English",
+        "proficiency": "Professional"
+      },
+      {
+        "name": "Hindi",
+        "proficiency": "Native"
+      },
+      {
+        "name": "Punjabi",
+        "proficiency": "Professional"
+      },
+      {
+        "name": "Sanskrit",
+        "proficiency": "Basic"
+      },
+      {
+        "name": "French",
+        "proficiency": "Basic"
+      },
+      {
+        "name": "Spanish",
+        "proficiency": "Basic"
+      }
+    ]
+  }
+}
