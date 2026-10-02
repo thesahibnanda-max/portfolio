@@ -1,3 +1,4 @@
+import socket
 import threading
 import time
 from collections.abc import Iterator
@@ -27,6 +28,28 @@ from tests.main.package.clients.groq.sse import DONE, FULL_DELTAS, FULL_STREAM, 
 from tests.support import RecordingTransport, ResponseSpec
 
 REQUEST = GroqChatCompletionRequest(model="llama-3.3-70b-versatile", messages=[GroqMessage(role="user", content="Rating?")])
+
+
+class ClosedSocketStream:
+    def __init__(self) -> None:
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.close()
+
+    def get_extra_info(self, name: str) -> socket.socket | None:
+        return self.socket if name == "socket" else None
+
+
+class ClosedSocketBody:
+    def __init__(self) -> None:
+        self.network_stream = ClosedSocketStream()
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=FULL_STREAM.encode(),
+            headers=SSE_HEADERS,
+            extensions={"network_stream": self.network_stream},
+        )
 
 
 class SplitBody:
@@ -408,6 +431,21 @@ def test_cancel_between_events_raises_on_next_step() -> None:
             next(stream)
 
     assert error.value.partial_text == "My rating"
+
+
+def test_cancel_tolerates_a_socket_that_is_already_closed() -> None:
+    body = ClosedSocketBody()
+    with _client(httpx.MockTransport(body)) as client, client.stream_chat_completion(REQUEST) as stream:
+        assert next(stream) == GroqTextDelta(text="My rating")
+        with pytest.raises(OSError):
+            body.network_stream.socket.shutdown(socket.SHUT_RDWR)
+
+        stream.cancel()
+
+        with pytest.raises(GroqStreamCancelledError):
+            next(stream)
+
+    assert stream.cancelled is True
 
 
 def test_cancel_after_the_end_does_nothing() -> None:
