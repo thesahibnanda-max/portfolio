@@ -1,0 +1,117 @@
+{
+  "accounts": [
+    {
+      "handle": "shisukenohara",
+      "current_rating": 1832,
+      "max_rating": 1987,
+      "contests_count": 15,
+      "rating_history": [
+        {
+          "contest_name": "Codeforces Round 977 (Div. 2, based on COMPFEST 16 - Final Round)",
+          "rank": 4595,
+          "old_rating": 0,
+          "new_rating": 483,
+          "contest_time": "2024-10-06T08:05:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 978 (Div. 2)",
+          "rank": 505,
+          "old_rating": 483,
+          "new_rating": 968,
+          "contest_time": "2024-10-13T21:35:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 979 (Div. 2)",
+          "rank": 1905,
+          "old_rating": 968,
+          "new_rating": 1254,
+          "contest_time": "2024-10-19T16:20:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 980 (Div. 2)",
+          "rank": 2895,
+          "old_rating": 1254,
+          "new_rating": 1378,
+          "contest_time": "2024-10-20T11:05:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 981 (Div. 3)",
+          "rank": 126,
+          "old_rating": 1378,
+          "new_rating": 1623,
+          "contest_time": "2024-10-24T16:50:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 982 (Div. 2)",
+          "rank": 657,
+          "old_rating": 1623,
+          "new_rating": 1732,
+          "contest_time": "2024-10-26T16:35:00Z"
+        },
+        {
+          "contest_name": "Educational Codeforces Round 171 (Rated for Div. 2)",
+          "rank": 583,
+          "old_rating": 1732,
+          "new_rating": 1801,
+          "contest_time": "2024-10-28T16:35:00Z"
+        },
+        {
+          "contest_name": "Refact.ai Match 1 (Codeforces Round 985)",
+          "rank": 937,
+          "old_rating": 1801,
+          "new_rating": 1855,
+          "contest_time": "2024-11-09T17:35:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 986 (Div. 2)",
+          "rank": 401,
+          "old_rating": 1855,
+          "new_rating": 1895,
+          "contest_time": "2024-11-10T17:35:00Z"
+        },
+        {
+          "contest_name": "Codeforces Global Round 28",
+          "rank": 2484,
+          "old_rating": 1895,
+          "new_rating": 1837,
+          "contest_time": "2024-12-19T17:35:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 994 (Div. 2)",
+          "rank": 212,
+          "old_rating": 1837,
+          "new_rating": 1933,
+          "contest_time": "2024-12-20T16:35:00Z"
+        },
+        {
+          "contest_name": "Educational Codeforces Round 173 (Rated for Div. 2)",
+          "rank": 230,
+          "old_rating": 1933,
+          "new_rating": 1987,
+          "contest_time": "2024-12-24T16:35:00Z"
+        },
+        {
+          "contest_name": "Good Bye 2024: 2025 is NEAR",
+          "rank": 1630,
+          "old_rating": 1987,
+          "new_rating": 1966,
+          "contest_time": "2024-12-28T17:35:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 996 (Div. 2)",
+          "rank": 1597,
+          "old_rating": 1966,
+          "new_rating": 1918,
+          "contest_time": "2025-01-12T16:35:00Z"
+        },
+        {
+          "contest_name": "Codeforces Round 1031 (Div. 2)",
+          "rank": 1900,
+          "old_rating": 1918,
+          "new_rating": 1832,
+          "contest_time": "2025-06-15T11:05:00Z"
+        }
+      ]
+    }
+  ]
+}

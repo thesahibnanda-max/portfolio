@@ -1,0 +1,148 @@
+{
+  "personal_profile": {
+    "personality": {
+      "core_traits": [
+        "Analytical",
+        "Logical",
+        "Disciplined",
+        "Ambitious",
+        "Competitive",
+        "Curious",
+        "Resilient",
+        "Calm Under Pressure",
+        "Adaptable",
+        "Detail Oriented",
+        "Reliable",
+        "Responsible",
+        "Continuous Learner",
+        "Growth Mindset"
+      ],
+      "professional_traits": [
+        "Leadership",
+        "Teamwork",
+        "Ownership",
+        "Accountability",
+        "Problem Solving",
+        "Critical Thinking",
+        "Communication",
+        "Collaboration",
+        "Decision Making",
+        "Time Management",
+        "Fast Learner",
+        "Execution Focused",
+        "Engineering Excellence",
+        "Innovation"
+      ],
+      "work_preferences": {
+        "preferred_domains": [
+          "Backend Engineering",
+          "Distributed Systems",
+          "System Design",
+          "Cloud Computing",
+          "High Performance Systems",
+          "Artificial Intelligence"
+        ],
+        "engineering_values": [
+          "Scalability",
+          "Performance",
+          "Reliability",
+          "Maintainability",
+          "Clean Architecture",
+          "Automation",
+          "Observability"
+        ]
+      },
+      "personal_values": ["Integrity", "Consistency", "Respect", "Continuous Improvement", "Discipline", "Excellence"]
+    },
+    "interests": {
+      "sports": {
+        "football": {
+          "favorite_team": "FC Barcelona",
+          "favorite_player": "Lionel Messi"
+        },
+        "cricket": {
+          "favorite_team": "India",
+          "favorite_player": "Virat Kohli"
+        }
+      },
+      "fitness": ["Weight Training", "Strength Training", "Bodybuilding", "General Fitness"],
+      "technology": [
+        "Backend Development",
+        "Distributed Systems",
+        "System Design",
+        "Artificial Intelligence",
+        "Open Source",
+        "Cloud Computing",
+        "Performance Engineering"
+      ]
+    },
+    "favorites": {
+      "movies": [
+        {
+          "title": "Bhaag Milkha Bhaag",
+          "genre": "Biographical Sports Drama"
+        },
+        {
+          "title": "Fight Club",
+          "genre": "Psychological Drama"
+        }
+      ],
+      "games": [
+        {
+          "title": "Red Dead Redemption 2",
+          "genre": "Open World Action Adventure"
+        },
+        {
+          "title": "Spider-Man 2",
+          "genre": "Open World Superhero Fantasy"
+        }
+      ],
+      "artists": [
+        {
+          "name": "The Weeknd",
+          "type": "Singer"
+        },
+        {
+          "name": "Karan Aujla",
+          "type": "Singer"
+        }
+      ],
+      "sports_icons": {
+        "football": "Lionel Messi",
+        "cricket": "Virat Kohli"
+      }
+    },
+    "lifestyle": {
+      "fitness_focused": true,
+      "sports_enthusiast": true,
+      "technology_enthusiast": true,
+      "continuous_learning": true
+    },
+    "languages": [
+      {
+        "name": "English",
+        "proficiency": "Professional"
+      },
+      {
+        "name": "Hindi",
+        "proficiency": "Native"
+      },
+      {
+        "name": "Punjabi",
+        "proficiency": "Professional"
+      },
+      {
+        "name": "Sanskrit",
+        "proficiency": "Basic"
+      },
+      {
+        "name": "French",
+        "proficiency": "Basic"
+      },
+      {
+        "name": "Spanish",
+        "proficiency": "Basic"
+      }
+    ]
+  }
+}

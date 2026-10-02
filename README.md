@@ -96,3 +96,16 @@ The site is static, so both values are read **at build time**. Astro's `astro:en
 cd backendPortfolio && GROQ_API_KEYS="gsk_..." venv/bin/uvicorn main.app:create_app --factory --port 8080
 cd frontendPortfolio && echo "PUBLIC_BACKEND_BASE_URL=http://localhost:8080" > .env && npm run dev
 ```
+
+## CI and contributing
+
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to `main`:
+  - **backend:** installs the free-threaded Python 3.14t, asserts the GIL is disabled, and runs the full pytest suite with 100% branch coverage enforced.
+  - **frontend:** runs `npm ci`, the type check and lint, the Vitest unit tests, a build against a fixture API (`frontendPortfolio/tests/support/mockBackend.mjs`, serving `tests/fixtures/api/*.json`), and the Playwright e2e tests. The Playwright report is uploaded when it fails.
+- **`main` is protected** by a repository ruleset:
+  - no direct pushes, force-pushes or deletion;
+  - every change goes through a pull request;
+  - a PR needs one approval from a code owner (`.github/CODEOWNERS`) and both `backend` and `frontend` checks passing on an up-to-date branch.
+
+  As an admin, the owner can merge their own PRs through the pull request (GitHub doesn't allow approving your own PR), but can't push to `main` directly.
+- **Refreshing the CI fixtures** after the portfolio data changes: run the backend locally, then save the `data` field of each `/details/<name>` response into `frontendPortfolio/tests/fixtures/api/<name>.json`. Leave out `physical_appearance` and `basic_info` from `personality.json`.
