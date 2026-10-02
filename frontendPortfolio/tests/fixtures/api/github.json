@@ -1,0 +1,235 @@
+{
+  "accounts": [
+    {
+      "username": "thesahibnanda-max",
+      "name": "Sahib Nanda",
+      "avatar_url": "https://avatars.githubusercontent.com/u/284372108?v=4",
+      "bio": "Passionate About Both Technology And Creative Arts. Currently Working As A SDE (Backend Developer) in CRED",
+      "public_repos": 11,
+      "followers": 3,
+      "following": 1,
+      "html_url": "https://github.com/thesahibnanda-max",
+      "repositories": [
+        {
+          "name": "portfolio",
+          "description": "Python3.14t Backend + Astro 5 Portfolio With LLM Capabilities",
+          "html_url": "https://github.com/thesahibnanda-max/portfolio",
+          "language": "Python",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-10-02T19:55:21Z"
+        },
+        {
+          "name": "relay",
+          "description": "Run Claude Code and Codex agents in separate terminals as one team",
+          "html_url": "https://github.com/thesahibnanda-max/relay",
+          "language": "Go",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-10-01T09:09:28Z"
+        },
+        {
+          "name": "mori",
+          "description": "a go-based transparent database proxy that reads from production, captures writes locally, merges reads, and resets instantly.",
+          "html_url": "https://github.com/thesahibnanda-max/mori",
+          "language": null,
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-09-17T05:18:03Z"
+        },
+        {
+          "name": "fastclient",
+          "description": null,
+          "html_url": "https://github.com/thesahibnanda-max/fastclient",
+          "language": "Go",
+          "stars": 1,
+          "forks": 0,
+          "updated_at": "2026-08-16T10:55:29Z"
+        },
+        {
+          "name": "redBus",
+          "description": "Production-grade event-driven bus booking platform built with 17 Go microservices, Kafka, Postgres, Redis, Elasticsearch, and Docker. Features saga-based bookings, atomic seat locking, transactional outbox, JWT auth, rate limiting, observability stack (Prometheus/Grafana/Jaeger), and one-command local deployment.",
+          "html_url": "https://github.com/thesahibnanda-max/redBus",
+          "language": "Go",
+          "stars": 1,
+          "forks": 0,
+          "updated_at": "2026-08-12T05:57:44Z"
+        },
+        {
+          "name": "helios",
+          "description": "Helios is a production-grade distributed real-time event streaming and analytics platform built with Java, Kafka, Flink, Cassandra, ClickHouse, Redis, and OpenTelemetry. Fully open-source, Docker-first, and designed to demonstrate Principal-level distributed systems, scalability, resiliency, observability, and event-driven architecture.",
+          "html_url": "https://github.com/thesahibnanda-max/helios",
+          "language": "Java",
+          "stars": 1,
+          "forks": 0,
+          "updated_at": "2026-08-12T05:57:43Z"
+        },
+        {
+          "name": "bucket4j",
+          "description": "Java rate limiting library based on token-bucket algorithm.",
+          "html_url": "https://github.com/thesahibnanda-max/bucket4j",
+          "language": null,
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-08-11T13:40:06Z"
+        },
+        {
+          "name": "go-git",
+          "description": "A highly extensible Git implementation in pure Go.",
+          "html_url": "https://github.com/thesahibnanda-max/go-git",
+          "language": null,
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-08-11T09:14:28Z"
+        },
+        {
+          "name": "djangoInstagramClone",
+          "description": "A full-stack Instagram clone built with Django 5 and Django REST Framework, using JWT for API authentication. It features user registration/login, follow/unfollow, post creation, likes, comments, htmx-powered direct messaging, and real-time notifications, styled with Bootstrap 5, served via Gunicorn with WhiteNoise, and licensed under BSD-3-Clause.",
+          "html_url": "https://github.com/thesahibnanda-max/djangoInstagramClone",
+          "language": "JavaScript",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-08-09T22:02:15Z"
+        },
+        {
+          "name": "alfa-leetcode-api",
+          "description": "It's a custom leetcode api. This API provides endpoints to retrieve details about a user's profile, badges, solved questions, contest details, contest history, submissions, calendar and and also daily questions, selected problem, list of problems.",
+          "html_url": "https://github.com/thesahibnanda-max/alfa-leetcode-api",
+          "language": null,
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-08-01T09:42:08Z"
+        },
+        {
+          "name": "sqlBackedQueue",
+          "description": "sqlBackedQueue is a production-grade, generic SQL-backed job queue for Go, supporting PostgreSQL, MySQL, and SQLite as interchangeable backends. It features lock-free batch claiming, heartbeat-based leases with automatic reclaiming, escalating retry policies, automatic cleanup, and graceful shutdown.",
+          "html_url": "https://github.com/thesahibnanda-max/sqlBackedQueue",
+          "language": "Go",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2026-07-31T15:34:20Z"
+        }
+      ]
+    },
+    {
+      "username": "thesahibnanda",
+      "name": "Sahib Nanda",
+      "avatar_url": "https://avatars.githubusercontent.com/u/125975388?v=4",
+      "bio": "Passionate About Both Technology And Creative Arts. Currently Pursuing My Second Year Of B.Tech In CSE With A Specialization In AI & ML.",
+      "public_repos": 12,
+      "followers": 10,
+      "following": 6,
+      "html_url": "https://github.com/thesahibnanda",
+      "repositories": [
+        {
+          "name": "ghost",
+          "description": null,
+          "html_url": "https://github.com/thesahibnanda/ghost",
+          "language": "Go",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2025-04-05T17:40:05Z"
+        },
+        {
+          "name": "Logs-Processing-Service",
+          "description": null,
+          "html_url": "https://github.com/thesahibnanda/Logs-Processing-Service",
+          "language": "C++",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2025-02-01T23:38:14Z"
+        },
+        {
+          "name": "AvataarAssignmentSahibNanda",
+          "description": "My Assignment For Avataar",
+          "html_url": "https://github.com/thesahibnanda/AvataarAssignmentSahibNanda",
+          "language": "Jupyter Notebook",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2024-10-03T18:17:20Z"
+        },
+        {
+          "name": "DSA",
+          "description": "DSA Problems Solved By Me To Track My Progress In Problem Solving And Improve My Coding Skills",
+          "html_url": "https://github.com/thesahibnanda/DSA",
+          "language": "C++",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2024-05-02T18:26:12Z"
+        },
+        {
+          "name": "tf-keras",
+          "description": "The TensorFlow-specific implementation of the Keras API, which was the default Keras from 2019 to 2023.",
+          "html_url": "https://github.com/thesahibnanda/tf-keras",
+          "language": "Python",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2024-03-21T09:46:24Z"
+        },
+        {
+          "name": "laughing-train",
+          "description": "Password Generator",
+          "html_url": "https://github.com/thesahibnanda/laughing-train",
+          "language": "CSS",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2024-02-04T07:54:09Z"
+        },
+        {
+          "name": "Melody_Generator_DeepLearning_Website",
+          "description": null,
+          "html_url": "https://github.com/thesahibnanda/Melody_Generator_DeepLearning_Website",
+          "language": "Python",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2023-11-19T19:36:42Z"
+        },
+        {
+          "name": "MinorProject1",
+          "description": "Minor Project 1 Repository ",
+          "html_url": "https://github.com/thesahibnanda/MinorProject1",
+          "language": "C++",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2023-10-07T19:01:31Z"
+        },
+        {
+          "name": "NLP-Disease-Predictor",
+          "description": "This is a machine learning tool that predicts diseases from symptoms using NLP and the BERT model, followed by a Random Forest classifier.",
+          "html_url": "https://github.com/thesahibnanda/NLP-Disease-Predictor",
+          "language": "Python",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2023-07-29T20:38:42Z"
+        },
+        {
+          "name": "AnalytiXHero",
+          "description": "Official GitHub Repository For Python Library AnalytiXHero.",
+          "html_url": "https://github.com/thesahibnanda/AnalytiXHero",
+          "language": "Python",
+          "stars": 1,
+          "forks": 0,
+          "updated_at": "2023-07-09T12:27:33Z"
+        },
+        {
+          "name": "Youtube-Comment-Sentiment-Analysis",
+          "description": "Presenting the YouTube Sentiment Analysis Tool, an advanced program that can extract specific comments from a given YouTube video and apply natural language processing techniques for sentiment analysis. This tool allows for quick analysis of individual comments as well as overall video sentiment.",
+          "html_url": "https://github.com/thesahibnanda/Youtube-Comment-Sentiment-Analysis",
+          "language": "Python",
+          "stars": 0,
+          "forks": 1,
+          "updated_at": "2023-04-01T16:20:08Z"
+        },
+        {
+          "name": "How-To-Preprocess-Dataset-And-Its-Importance",
+          "description": "The primary aim of this project is to emphasize the significance of data preprocessing prior to model fitting. The secondary notebook illustrates efficient methods for data preprocessing, which can enhance the model's accuracy.",
+          "html_url": "https://github.com/thesahibnanda/How-To-Preprocess-Dataset-And-Its-Importance",
+          "language": "Jupyter Notebook",
+          "stars": 0,
+          "forks": 0,
+          "updated_at": "2023-04-01T16:09:40Z"
+        }
+      ]
+    }
+  ]
+}
