@@ -1,0 +1,65 @@
+---
+import serifLatinItalic from "@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url";
+import serifLatin from "@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url";
+import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+import "../styles/global.css";
+
+interface Props {
+  readonly title: string;
+  readonly description: string;
+  readonly sameAs: readonly string[];
+  readonly personName: string;
+}
+
+const { title, description, sameAs, personName } = Astro.props;
+const canonical = Astro.site === undefined ? undefined : new URL(Astro.url.pathname, Astro.site).href;
+const personJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: personName,
+  jobTitle: "Software Development Engineer",
+  sameAs,
+});
+---
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0B0B0C" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {canonical !== undefined && <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content="profile" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical !== undefined && <meta property="og:url" content={canonical} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href={serifLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={serifLatinItalic} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
+    <script is:inline>
+      document.documentElement.classList.remove("no-js");
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        document.documentElement.classList.add("reduced-motion");
+      }
+    </script>
+    <script type="application/ld+json" set:html={personJsonLd} />
+  </head>
+  <body class="bg-bg text-text">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-accent focus:px-4 focus:py-2 focus:text-bg"
+    >
+      Skip to content
+    </a>
+    <div class="grain" aria-hidden="true"></div>
+    <slot />
+    <script>
+      import "../scripts/page";
+    </script>
+  </body>
+</html>

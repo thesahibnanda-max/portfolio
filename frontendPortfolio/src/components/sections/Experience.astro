@@ -1,0 +1,106 @@
+---
+import type { Experience } from "../../lib/api/schemas";
+import { experienceDuration, formatYearMonth, isCurrent } from "../../lib/format";
+import SectionHeader from "../ui/SectionHeader.astro";
+
+interface Props {
+  readonly experience: readonly Experience[];
+  readonly now: Date;
+}
+
+const { experience, now } = Astro.props;
+---
+
+<section id="experience" class="relative px-5 py-28 sm:px-8 md:py-40">
+  <div class="mx-auto max-w-6xl">
+    <SectionHeader
+      index={1}
+      label="Experience"
+      title="Systems I've shipped,"
+      emphasis="teams I've grown with."
+      lede="From automation and data to event platforms moving thousands of events a second."
+    />
+
+    <ol class="timeline relative grid gap-6 md:ml-[25%]">
+      <span class="timeline-rail absolute top-2 bottom-2 left-[7px] w-px bg-line md:-left-10" aria-hidden="true">
+        <span class="timeline-progress absolute inset-x-0 top-0 h-full origin-top bg-gradient-to-b from-accent via-accent/60 to-transparent"></span>
+      </span>
+      {
+        experience.map((role, index) => (
+          <li class="relative pl-8 md:pl-0" data-reveal style={`--reveal-index: ${index % 3}`}>
+            <span
+              class:list={[
+                "absolute top-7 left-0 size-[15px] rounded-full border-2 md:-left-[47px]",
+                isCurrent(role) ? "border-accent bg-accent [animation:pulse-ring_2s_infinite]" : "border-line-strong bg-bg",
+              ]}
+              aria-hidden="true"
+            />
+            <article
+              class="card spotlight p-6 sm:p-8"
+              data-tech={role.technologies.map((tech) => tech.toLowerCase()).join("|")}
+            >
+              <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+                <h3 class="text-xl font-medium sm:text-2xl">
+                  {role.title}
+                  <span class="text-muted"> · </span>
+                  <span class="text-accent">{role.company}</span>
+                </h3>
+                <p class="tabular text-sm text-muted">
+                  {formatYearMonth(role.start_date)} — {formatYearMonth(role.end_date)}
+                  <span class="ml-2 rounded-full bg-white/5 px-2 py-0.5 text-xs text-faint">
+                    {experienceDuration(role, now)}
+                  </span>
+                </p>
+              </div>
+              <p class="mt-1 text-sm text-faint">
+                {role.employment_type} · {role.location}
+              </p>
+              <ul class="mt-5 grid gap-2.5 text-[0.95rem] leading-relaxed text-muted">
+                {role.description.map((line) => (
+                  <li class="flex gap-3">
+                    <span class="mt-2.5 size-1 shrink-0 rounded-full bg-accent/70" aria-hidden="true" />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+              <ul class="mt-6 flex flex-wrap gap-1.5" aria-label="Technologies">
+                {role.technologies.map((tech) => (
+                  <li class="pill" data-skill-pill={tech.toLowerCase()}>{tech}</li>
+                ))}
+              </ul>
+            </article>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .timeline-progress {
+    transform: scaleY(0.15);
+  }
+
+  @supports (animation-timeline: view()) {
+    .timeline-progress {
+      animation: grow linear both;
+      animation-timeline: view();
+      animation-range: entry 10% exit 60%;
+    }
+  }
+
+  @supports not (animation-timeline: view()) {
+    .timeline-progress {
+      transform: none;
+    }
+  }
+
+  @keyframes grow {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+</style>

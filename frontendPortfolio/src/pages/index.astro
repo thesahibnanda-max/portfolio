@@ -1,0 +1,89 @@
+---
+import Achievements from "../components/sections/Achievements.astro";
+import Competitive from "../components/sections/Competitive.astro";
+import Contact from "../components/sections/Contact.astro";
+import Experience from "../components/sections/Experience.astro";
+import Hero from "../components/sections/Hero.astro";
+import OffTheClock from "../components/sections/OffTheClock.astro";
+import OpenSource from "../components/sections/OpenSource.astro";
+import Projects from "../components/sections/Projects.astro";
+import SignalStrip from "../components/sections/SignalStrip.astro";
+import Skills from "../components/sections/Skills.astro";
+import Nav from "../components/ui/Nav.astro";
+import { codeforces, github, leetcode, personality, professional, profile } from "../content/snapshot";
+import Base from "../layouts/Base.astro";
+
+const now = new Date();
+
+function firstSentence(text: string | null): string | null {
+  if (text === null) {
+    return null;
+  }
+  const sentence = /^.+?[.!?](?=\s|$)/.exec(text.trim())?.[0];
+  return sentence ?? text.trim();
+}
+const name = profile.profile_details.name;
+const initials = name
+  .split(" ")
+  .map((part) => part.charAt(0))
+  .join("")
+  .slice(0, 2)
+  .toUpperCase();
+const primaryLeetcode = leetcode.accounts[0];
+const tagline = firstSentence(primaryLeetcode?.about_me ?? null);
+const repositories = github.accounts.flatMap((account) => account.repositories);
+const technologies = [...new Set(profile.experience.flatMap((role) => role.technologies))].slice(0, 24);
+const sameAs = [
+  ...professional.github_links,
+  ...professional.leetcode_links,
+  ...professional.codeforces_links,
+  ...(professional.twitter_url === null ? [] : [professional.twitter_url]),
+  ...(primaryLeetcode === undefined || primaryLeetcode.linkedin_url === null ? [] : [primaryLeetcode.linkedin_url]),
+];
+const links = [
+  { href: "#experience", label: "Experience" },
+  { href: "#projects", label: "Work" },
+  { href: "#competitive", label: "Contests" },
+  { href: "#skills", label: "Stack" },
+  { href: "#contact", label: "Contact" },
+];
+---
+
+<Base
+  title={`${name} — Backend Engineer`}
+  description={`${name} builds distributed, event-driven backend systems. Experience, projects, competitive programming and an AI that answers questions about him.`}
+  sameAs={sameAs}
+  personName={name}
+>
+  <Nav initials={initials} links={links} />
+  <main id="main">
+    <Hero
+      name={name}
+      current={profile.experience[0]}
+      tagline={tagline}
+      codeforces={codeforces.accounts[0]}
+      leetcode={primaryLeetcode}
+      resumeLink={professional.resume_link}
+    />
+    <SignalStrip technologies={technologies} />
+    <Experience experience={profile.experience} now={now} />
+    <Projects projects={profile.projects} repositories={repositories} />
+    <Competitive
+      codeforces={codeforces.accounts}
+      leetcode={leetcode.accounts}
+      codeforcesLinks={professional.codeforces_links}
+      leetcodeLinks={professional.leetcode_links}
+    />
+    <OpenSource accounts={github.accounts} />
+    <Skills skillsByCategory={profile.skills_by_category} />
+    <Achievements achievements={profile.achievements} education={profile.education} />
+    <OffTheClock personality={personality} />
+    <Contact
+      email={profile.profile_details.email}
+      name={name}
+      professional={professional}
+      linkedinUrl={primaryLeetcode?.linkedin_url ?? null}
+    />
+  </main>
+  <div data-chat-root data-owner-name={name.split(" ")[0] ?? name}></div>
+</Base>

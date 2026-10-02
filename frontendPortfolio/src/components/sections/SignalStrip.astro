@@ -1,0 +1,20 @@
+---
+interface Props {
+  readonly technologies: readonly string[];
+}
+
+const { technologies } = Astro.props;
+---
+
+<div class="marquee overflow-hidden border-y border-line py-5" aria-label="Technologies I work with">
+  <ul class="marquee-track flex w-max gap-10">
+    {
+      [...technologies, ...technologies].map((tech, index) => (
+        <li class="flex items-center gap-10 font-mono text-sm whitespace-nowrap text-muted" aria-hidden={index >= technologies.length ? "true" : undefined}>
+          {tech}
+          <span class="text-accent" aria-hidden="true">✦</span>
+        </li>
+      ))
+    }
+  </ul>
+</div>

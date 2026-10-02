@@ -1,0 +1,24 @@
+---
+interface Props {
+  readonly index: number;
+  readonly label: string;
+  readonly title: string;
+  readonly emphasis?: string;
+  readonly lede?: string;
+}
+
+const { index, label, title, emphasis, lede } = Astro.props;
+---
+
+<header class="mb-14 grid gap-6 md:mb-20 md:grid-cols-12" data-reveal>
+  <p class="eyebrow md:col-span-3 md:pt-4">
+    <span class="text-accent">{String(index).padStart(2, "0")}</span>
+    <span class="mx-2 text-faint">/</span>{label}
+  </p>
+  <div class="md:col-span-9">
+    <h2 class="display text-5xl text-balance sm:text-6xl lg:text-7xl">
+      {title}{emphasis !== undefined && <> <em class="text-accent italic">{emphasis}</em></>}
+    </h2>
+    {lede !== undefined && <p class="mt-6 max-w-2xl text-lg leading-relaxed text-muted">{lede}</p>}
+  </div>
+</header>

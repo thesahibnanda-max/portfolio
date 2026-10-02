@@ -1,0 +1,85 @@
+---
+import type { Project, Repository } from "../../lib/api/schemas";
+import { hostname } from "../../lib/format";
+import SectionHeader from "../ui/SectionHeader.astro";
+
+interface Props {
+  readonly projects: readonly Project[];
+  readonly repositories: readonly Repository[];
+}
+
+const { projects, repositories } = Astro.props;
+const FEATURED = 2;
+const repoByUrl = new Map(repositories.map((repo) => [repo.html_url.toLowerCase(), repo]));
+const ordered = [...projects].sort((left, right) => right.year - left.year);
+---
+
+<section id="projects" class="relative px-5 py-28 sm:px-8 md:py-40">
+  <div class="hairline-grid pointer-events-none absolute inset-0 -z-10 opacity-60" aria-hidden="true"></div>
+  <div class="mx-auto max-w-6xl">
+    <SectionHeader
+      index={2}
+      label="Selected work"
+      title="Things I built"
+      emphasis="to learn how things break."
+    />
+
+    <ul class="grid gap-5 md:grid-cols-6">
+      {
+        ordered.map((project, index) => {
+          const featured = index < FEATURED;
+          const repo = repoByUrl.get(project.link.toLowerCase());
+          const [title, subtitle] = project.name.split(" - ");
+          return (
+            <li
+              class:list={[featured ? "md:col-span-3" : "md:col-span-2"]}
+              data-reveal
+              style={`--reveal-index: ${index % 3}`}
+            >
+              <a
+                href={project.link}
+                target="_blank"
+                rel="noopener"
+                class="card spotlight group flex h-full flex-col overflow-hidden p-6 sm:p-7"
+                data-tech={project.technologies.map((tech) => tech.toLowerCase()).join("|")}
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <span class="tabular text-xs text-faint">{project.year}</span>
+                  <span class="flex items-center gap-3 font-mono text-xs text-faint">
+                    {repo?.language !== null && repo?.language !== undefined && (
+                      <span class="flex items-center gap-1.5">
+                        <span class="size-2 rounded-full bg-accent/80" aria-hidden="true" />
+                        {repo.language}
+                      </span>
+                    )}
+                    {repo !== undefined && repo.stars > 0 && <span>★ {repo.stars}</span>}
+                  </span>
+                </div>
+                <h3 class:list={["mt-6 font-medium text-balance", featured ? "text-3xl" : "text-xl"]}>
+                  {title}
+                  {subtitle !== undefined && <span class="mt-1 block text-base font-normal text-muted">{subtitle}</span>}
+                </h3>
+                <ul class="mt-5 grid gap-2 text-sm leading-relaxed text-muted">
+                  {project.description.slice(0, featured ? 4 : 2).map((line) => (
+                    <li>{line}</li>
+                  ))}
+                </ul>
+                <div class="mt-auto pt-7">
+                  <ul class="flex flex-wrap gap-1.5" aria-label="Technologies">
+                    {project.technologies.slice(0, featured ? 10 : 5).map((tech) => (
+                      <li class="pill" data-skill-pill={tech.toLowerCase()}>{tech}</li>
+                    ))}
+                  </ul>
+                  <p class="mt-6 flex items-center justify-between font-mono text-xs text-faint transition-colors duration-300 group-hover:text-accent">
+                    {hostname(project.link)}
+                    <span aria-hidden="true" class="transition-transform duration-500 ease-out group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>
+                  </p>
+                </div>
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
+</section>
