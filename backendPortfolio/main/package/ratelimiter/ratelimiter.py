@@ -3,7 +3,6 @@ import re
 import threading
 import time
 from collections.abc import Mapping
-from contextlib import ExitStack
 from datetime import timedelta
 from types import MappingProxyType
 
@@ -22,7 +21,6 @@ from main.package.ratelimiter.exceptions import (
 _API_NAME = re.compile(r"[a-z0-9_]+")
 _GLOBAL_IDENTIFIER = "all"
 _MIN_RETRY_AFTER_SECONDS = 1
-_LOCK_STRIPES = 64
 
 
 class RateLimiter:
@@ -40,7 +38,7 @@ class RateLimiter:
         self._storage = self._build_storage(storage_uri)
         self._strategy = SlidingWindowCounterRateLimiter(self._storage)
         self._items = items
-        self._locks = tuple(threading.Lock() for _ in range(_LOCK_STRIPES))
+        self._storage_lock = threading.Lock()
 
     @property
     def apis(self) -> frozenset[str]:
@@ -51,7 +49,7 @@ class RateLimiter:
 
         for scope, identifier in self._identifiers(client_ip, session_id):
             item = items[scope]
-            with self._lock_for(api, scope, identifier):
+            with self._storage_lock:
                 allowed = self._strategy.hit(item, api, scope, identifier)
                 retry_after = None if allowed else self._retry_after(item, api, scope, identifier)
 
@@ -68,19 +66,14 @@ class RateLimiter:
         remaining: dict[RateLimitScope, int] = {}
 
         for scope, identifier in self._identifiers(client_ip, session_id):
-            with self._lock_for(api, scope, identifier):
+            with self._storage_lock:
                 remaining[scope] = self._strategy.get_window_stats(items[scope], api, scope, identifier).remaining
 
         return MappingProxyType(remaining)
 
     def reset(self) -> None:
-        with ExitStack() as stack:
-            for lock in self._locks:
-                stack.enter_context(lock)
+        with self._storage_lock:
             self._storage.reset()
-
-    def _lock_for(self, api: str, scope: RateLimitScope, identifier: str) -> threading.Lock:
-        return self._locks[hash((api, scope, identifier)) % len(self._locks)]
 
     def _items_for(self, api: str) -> Mapping[RateLimitScope, RateLimitItem]:
         if not isinstance(api, str) or api not in self._items:

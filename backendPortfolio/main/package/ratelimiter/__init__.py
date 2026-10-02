@@ -74,14 +74,15 @@ Errors (all in exceptions.py, all subclasses of RateLimiterError):
 Thread safety:
     One RateLimiter can serve every thread on the free-threaded Python 3.14t
     build and never lets more requests through than a limit. limits' memory
-    storage is not safe for concurrent use of one key (get() can drop a
-    counter another thread has just created, and per-key locks can be
-    replaced while held), which over-admitted badly under free threading. So
-    every hit and stats read takes one of 64 striped locks chosen by
-    (api, scope, identifier): calls on the same key are serialised, calls on
-    different keys mostly run in parallel, and memory stays bounded however
-    many IPs or sessions arrive. reset() takes every stripe. The rules are
-    immutable. limits is pure Python and keeps the GIL disabled.
+    storage is not safe for concurrent use: get() can drop a counter another
+    thread has just created, per-key locks can be replaced while held, and
+    its expiry timer is restarted without a lock, so two threads can start
+    the same threading.Timer twice. Under free threading that last race
+    corrupts the interpreter's thread list and crashes it at exit (seen on
+    Linux). So every hit, stats read and reset goes through one lock held by
+    the limiter, which serialises all calls into the storage. Each call takes
+    microseconds, so the lock is not a bottleneck. The rules are immutable.
+    limits is pure Python and keeps the GIL disabled.
 
 Example:
     limiter = RateLimiter(
