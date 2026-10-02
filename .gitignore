@@ -26,8 +26,10 @@ build/
 htmlcov/
 coverage.xml
 
-# SQLite chat store (backendPortfolio/data/backend_portfolio.sqlite3)
-data/
+# SQLite chat store (data/backend_portfolio.sqlite3, relative to where the server runs).
+# Anchored to these folders only: a bare "data/" would also hide main/package/service/data.
+/data/
+/backendPortfolio/data/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
