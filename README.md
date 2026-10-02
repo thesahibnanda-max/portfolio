@@ -99,7 +99,7 @@ cd frontendPortfolio && echo "PUBLIC_BACKEND_BASE_URL=http://localhost:8080" > .
 
 ## CI and contributing
 
-- **CI** (`.github/workflows/ci.yml`) runs on every pull request and every push to `main`:
+- **CI** (`.github/workflows/ci.yml`) runs only on pull requests. There's no rerun after merging: `main` only accepts PRs whose checks passed on a branch already up to date with it.
   - **backend:** installs the free-threaded Python 3.14t, asserts the GIL is disabled, and runs the full pytest suite with 100% branch coverage enforced.
   - **frontend:** runs `npm ci`, the type check and lint, the Vitest unit tests, a build against a fixture API (`frontendPortfolio/tests/support/mockBackend.mjs`, serving `tests/fixtures/api/*.json`), and the Playwright e2e tests. The Playwright report is uploaded when it fails.
 - **`main` is protected** by a repository ruleset:
