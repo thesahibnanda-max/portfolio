@@ -109,3 +109,29 @@ cd frontendPortfolio && echo "PUBLIC_BACKEND_BASE_URL=http://localhost:8080" > .
 
   As an admin, the owner can merge their own PRs through the pull request (GitHub doesn't allow approving your own PR), but can't push to `main` directly.
 - **Refreshing the CI fixtures** after the portfolio data changes: run the backend locally, then save the `data` field of each `/details/<name>` response into `frontendPortfolio/tests/fixtures/api/<name>.json`. Leave out `physical_appearance` and `basic_info` from `personality.json`.
+
+## Deployment
+
+Live at **https://portfolio-sahib-nanda.duckdns.org**, with the API at **https://api.portfolio-sahib-nanda.duckdns.org**. Both run on one Oracle Cloud VM (Ubuntu 26.04, x86_64, 1 GB RAM plus 2 GB swap).
+
+- **Server:**
+  - Caddy terminates HTTPS with automatic Let's Encrypt certificates, serves the static frontend from `/opt/portfolio/frontend`, and proxies the API to `127.0.0.1:8080`.
+  - The backend runs as the sandboxed `portfolio` user under systemd (`portfolio-backend.service`): gunicorn with one uvloop/httptools worker on free-threaded Python 3.14.8t, installed by `uv` in `/opt/portfolio/python`.
+  - Secrets live in the root-only `/etc/portfolio/backend.env`; the SQLite store in `/var/lib/portfolio`.
+- **Releases:**
+  - Each deploy uploads to `/opt/portfolio/releases/<sha>-<time>` (backend, with its own venv) and `/opt/portfolio/frontend-releases/<sha>-<time>`. `portfolio-activate` switches the `current` and `frontend` symlinks.
+  - The backend is health-checked, and an unhealthy release is rolled back automatically. The last 3 releases of each are kept.
+- **CD** (`.github/workflows/deploy.yml`): every merge to `main` (or a manual run from the Actions tab) runs these steps in order:
+  1. ship the committed `backendPortfolio` and build its venv on the VM;
+  2. refresh the env file from GitHub secrets;
+  3. activate and health-check the backend;
+  4. build the frontend against the live API and activate it;
+  5. smoke-test both public URLs.
+
+  Deploys run one at a time and are never cancelled midway.
+- **GitHub configuration:**
+  - secrets `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` (the VM's pinned host keys), `DEPLOY_HOST` and `DEPLOY_USER`, plus the backend variables from `.env`;
+  - repository variables `PUBLIC_BACKEND_BASE_URL` and `PUBLIC_SITE_URL`.
+
+  To rotate a secret, update it in GitHub, then rerun the Deploy workflow.
+- **Rebuilding the server:** `deploy/setup-server.sh` is the idempotent one-time setup: swap, Caddy, uv with Python 3.14t, the service user, the systemd unit, the activation script and the Caddyfile. Run it with `sudo bash setup-server.sh` on a fresh VM with `uv` installed for `ubuntu`, then run the Deploy workflow.

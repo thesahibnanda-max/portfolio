@@ -1,0 +1,114 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_SITE_URL }}
+    env:
+      SSH_TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          {
+            echo "Host deploy-target"
+            echo "  HostName ${{ secrets.DEPLOY_HOST }}"
+            echo "  User ${{ secrets.DEPLOY_USER }}"
+            echo "  IdentityFile ~/.ssh/deploy_key"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+            echo "  BatchMode yes"
+            echo "  ServerAliveInterval 15"
+          } > ~/.ssh/config
+          ssh deploy-target true
+
+      - name: Name the release
+        run: echo "RELEASE=${GITHUB_SHA::7}-$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
+
+      - name: Upload and build the backend
+        run: |
+          git archive --format=tar HEAD:backendPortfolio \
+            | ssh deploy-target "mkdir -p /opt/portfolio/releases/$RELEASE/src && tar -x -C /opt/portfolio/releases/$RELEASE/src"
+          ssh deploy-target "set -e
+            cd /opt/portfolio/releases/$RELEASE
+            export UV_PYTHON_INSTALL_DIR=/opt/portfolio/python
+            uv venv -q -p 3.14.8t venv
+            uv pip install -q --python venv/bin/python ./src
+            venv/bin/python -c 'import sys, main.app; assert not sys._is_gil_enabled()'"
+
+      - name: Update the backend environment
+        env:
+          GROQ_API_KEYS: ${{ secrets.GROQ_API_KEYS }}
+          MAIL_ACCOUNT_1_USERNAME: ${{ secrets.MAIL_ACCOUNT_1_USERNAME }}
+          MAIL_ACCOUNT_1_PASSWORD: ${{ secrets.MAIL_ACCOUNT_1_PASSWORD }}
+          MAIL_ACCOUNT_2_USERNAME: ${{ secrets.MAIL_ACCOUNT_2_USERNAME }}
+          MAIL_ACCOUNT_2_PASSWORD: ${{ secrets.MAIL_ACCOUNT_2_PASSWORD }}
+          RECIPIENT_MAIL: ${{ secrets.RECIPIENT_MAIL }}
+        run: |
+          {
+            printf 'GROQ_API_KEYS=%s\n' "$GROQ_API_KEYS"
+            printf 'MAIL_ACCOUNT_1_USERNAME=%s\n' "$MAIL_ACCOUNT_1_USERNAME"
+            printf 'MAIL_ACCOUNT_1_PASSWORD=%s\n' "$MAIL_ACCOUNT_1_PASSWORD"
+            printf 'MAIL_ACCOUNT_2_USERNAME=%s\n' "$MAIL_ACCOUNT_2_USERNAME"
+            printf 'MAIL_ACCOUNT_2_PASSWORD=%s\n' "$MAIL_ACCOUNT_2_PASSWORD"
+            printf 'RECIPIENT_MAIL=%s\n' "$RECIPIENT_MAIL"
+          } | ssh deploy-target "sudo portfolio-activate env"
+
+      - name: Activate the backend
+        run: ssh deploy-target "sudo portfolio-activate backend $RELEASE"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontendPortfolio/package-lock.json
+
+      - name: Build the frontend against the live API
+        working-directory: frontendPortfolio
+        env:
+          PUBLIC_BACKEND_BASE_URL: ${{ vars.PUBLIC_BACKEND_BASE_URL }}
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload and activate the frontend
+        run: |
+          tar -C frontendPortfolio/dist -cf - . \
+            | ssh deploy-target "mkdir -p /opt/portfolio/frontend-releases/$RELEASE && tar -x -C /opt/portfolio/frontend-releases/$RELEASE && chmod -R a+rX /opt/portfolio/frontend-releases/$RELEASE"
+          ssh deploy-target "sudo portfolio-activate frontend $RELEASE"
+
+      - name: Smoke test the public site
+        run: |
+          curl --silent --fail --max-time 20 "${{ vars.PUBLIC_BACKEND_BASE_URL }}/health"
+          curl --silent --fail --max-time 20 --output /dev/null "${{ vars.PUBLIC_SITE_URL }}/"
+          echo "Deployed $RELEASE to ${{ vars.PUBLIC_SITE_URL }}"
+
+      - name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
