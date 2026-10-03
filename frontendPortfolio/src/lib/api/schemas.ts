@@ -97,7 +97,7 @@ export const professionalSchema = z.object({
   leetcode_links: z.array(z.url()),
   codeforces_links: z.array(z.url()),
   github_links: z.array(z.url()),
-  resume_link: z.url(),
+  resume_link: z.string().startsWith("/"),
   profile_photo_links: z.array(z.url()),
   websites: z.array(z.url()),
   twitter_url: z.url().nullable().default(null),

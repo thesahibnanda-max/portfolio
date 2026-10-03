@@ -9,11 +9,11 @@ interface Props {
   readonly tagline: string | null;
   readonly codeforces: CodeforcesAccount | undefined;
   readonly leetcode: LeetcodeAccount | undefined;
-  readonly resumeLink: string;
+  readonly resumeUrl: string;
   readonly profileImageUrl: string;
 }
 
-const { name, current, tagline, codeforces, leetcode, resumeLink, profileImageUrl } = Astro.props;
+const { name, current, tagline, codeforces, leetcode, resumeUrl, profileImageUrl } = Astro.props;
 const [firstName, ...rest] = name.split(" ");
 const lastName = rest.join(" ");
 const peak = codeforces?.max_rating ?? null;
@@ -119,7 +119,7 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
         <kbd class="rounded-full bg-bg/15 px-2 py-0.5 font-mono text-xs">⌘K</kbd>
       </button>
       <a
-        href={resumeLink}
+        href={resumeUrl}
         target="_blank"
         rel="noopener"
         class="inline-flex items-center gap-2 rounded-full border border-line-strong px-6 py-3 text-text transition-colors duration-300 hover:border-text"
