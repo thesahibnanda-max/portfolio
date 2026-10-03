@@ -12,7 +12,7 @@ from types import TracebackType
 from typing import Self
 
 from main.package.repository.chat_repository import ChatRepository
-from main.package.repository.dto import Chat, ChatSummary, NewMessage, Session, StoredMessage
+from main.package.repository.dto import Chat, ChatOrigin, ChatSummary, NewMessage, Session, StoredMessage
 from main.package.repository.exceptions import (
     ChatNotFoundError,
     InvalidRepositoryArgumentError,
@@ -24,7 +24,11 @@ from main.package.repository.exceptions import (
 _logger = logging.getLogger(__name__)
 
 _SCHEMA_PATH = Path(__file__).with_name("schema.sql")
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+_ORIGIN_COLUMN_VERSION = 2
+_ADD_ORIGIN_COLUMN_SQL = (
+    "ALTER TABLE chats ADD COLUMN origin TEXT NOT NULL DEFAULT 'chat' CHECK (origin IN ('chat', 'cli'))"
+)
 _UUID_VERSION = 7
 _DEFAULT_TITLE = "New chat"
 _MAX_TITLE_LENGTH = 200
@@ -32,7 +36,7 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 _ONE_MICROSECOND = timedelta(microseconds=1)
 
 _LIVE_CHAT_SQL = (
-    "SELECT c.chat_id, c.session_id, c.title, c.created_at, c.updated_at "
+    "SELECT c.chat_id, c.session_id, c.title, c.created_at, c.updated_at, c.origin "
     "FROM chats AS c JOIN sessions AS s ON s.session_id = c.session_id "
     "WHERE c.chat_id = ? AND c.session_id = ? AND s.expires_at > ?"
 )
@@ -95,17 +99,18 @@ class SqliteChatRepository(ChatRepository):
 
         return Session(session_id=row[0], created_at=_to_datetime(row[1]), expires_at=_to_datetime(row[2]))
 
-    def create_chat(self, session_id: str, title: str = _DEFAULT_TITLE) -> ChatSummary:
+    def create_chat(self, session_id: str, title: str = _DEFAULT_TITLE, origin: ChatOrigin = ChatOrigin.CHAT) -> ChatSummary:
         session_id = self._require_uuid7("session_id", session_id)
         title = self._require_title(title)
+        origin = self._require_origin(origin)
         chat_id = str(uuid.uuid7())
         now = _now_us()
 
         with self._transaction(write=True) as connection:
             self._live_session_row(connection, session_id, now)
             connection.execute(
-                "INSERT INTO chats (chat_id, session_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                (chat_id, session_id, title, now, now),
+                "INSERT INTO chats (chat_id, session_id, title, created_at, updated_at, origin) VALUES (?, ?, ?, ?, ?, ?)",
+                (chat_id, session_id, title, now, now, origin.value),
             )
 
         return ChatSummary(
@@ -114,6 +119,7 @@ class SqliteChatRepository(ChatRepository):
             title=title,
             created_at=_to_datetime(now),
             updated_at=_to_datetime(now),
+            origin=origin,
         )
 
     def list_chats(self, session_id: str) -> tuple[ChatSummary, ...]:
@@ -123,7 +129,7 @@ class SqliteChatRepository(ChatRepository):
         with self._transaction(write=False) as connection:
             self._live_session_row(connection, session_id, now)
             rows = connection.execute(
-                "SELECT chat_id, session_id, title, created_at, updated_at FROM chats "
+                "SELECT chat_id, session_id, title, created_at, updated_at, origin FROM chats "
                 "WHERE session_id = ? ORDER BY updated_at DESC, chat_id DESC",
                 (session_id,),
             ).fetchall()
@@ -246,6 +252,8 @@ class SqliteChatRepository(ChatRepository):
                 )
             connection.execute("PRAGMA journal_mode = WAL")
             connection.executescript(schema)
+            if 0 < version < _ORIGIN_COLUMN_VERSION:
+                connection.execute(_ADD_ORIGIN_COLUMN_SQL)
             connection.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
         except sqlite3.Error as error:
             raise RepositoryOperationError(f"Could not initialise SQLite database {self._database_path}") from error
@@ -299,6 +307,7 @@ class SqliteChatRepository(ChatRepository):
             title=row[2],
             created_at=_to_datetime(row[3]),
             updated_at=_to_datetime(row[4]),
+            origin=ChatOrigin(row[5]),
         )
 
     @staticmethod
@@ -315,6 +324,13 @@ class SqliteChatRepository(ChatRepository):
             raise InvalidRepositoryArgumentError(f"{name} must be a UUIDv7 string")
 
         return str(parsed)
+
+    @staticmethod
+    def _require_origin(origin: ChatOrigin) -> ChatOrigin:
+        if not isinstance(origin, ChatOrigin):
+            raise InvalidRepositoryArgumentError("origin must be a ChatOrigin")
+
+        return origin
 
     @staticmethod
     def _require_title(title: str) -> str:

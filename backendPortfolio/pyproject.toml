@@ -44,6 +44,7 @@ namespaces = true
 "main.package.service.contact" = ["templates/*.md"]
 "main.package.ai.orchestrator" = ["*.md"]
 "main.package.ai.worker" = ["*.md"]
+"main.package.ai.agent" = ["*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

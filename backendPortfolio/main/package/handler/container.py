@@ -6,6 +6,7 @@ import dns.resolver
 import httpx
 
 from main.config import AppConfig
+from main.package.ai.agent import Agent
 from main.package.ai.common import LLMModel, ModelSelector
 from main.package.ai.orchestrator import Orchestrator
 from main.package.ai.worker import Worker
@@ -16,6 +17,7 @@ from main.package.clients.leetcode import LeetcodeClient
 from main.package.mail import Mailer, SmtpAccount, SmtpConnector
 from main.package.ratelimiter import RateLimiter, RateLimitRule
 from main.package.repository import ChatRepository, SqliteChatRepository
+from main.package.service.agent import AgentService, AnswerCache, ScopeGate, TokenBudget
 from main.package.service.chat import ChatService, HistoryWindow, MessageValidator
 from main.package.service.contact import ContactService, EmailNormalizer
 from main.package.service.context import (
@@ -28,7 +30,7 @@ from main.package.service.context import (
 )
 from main.package.service.data import DataService, PlatformAccount
 from main.package.static import StaticLoader
-from main.package.ttl_key_value_store import TTLKeyValueStoreFactory
+from main.package.ttl_key_value_store import TTLKeyValueStore, TTLKeyValueStoreFactory
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,7 @@ class ServiceContainer:
     data_service: DataService
     static_loader: StaticLoader
     chat_service: ChatService
+    agent_service: AgentService
     contact_service: ContactService
     rate_limiter: RateLimiter
     closers: tuple[Callable[[], None], ...] = ()
@@ -104,6 +107,14 @@ class ServiceContainer:
             data_service=data_service,
             static_loader=static_loader,
             chat_service=cls._chat_service(config, repository, aggregator, groq, static_loader),
+            agent_service=cls._agent_service(
+                config,
+                repository,
+                aggregator,
+                groq,
+                static_loader,
+                factory.get_ttl_key_value_store(config.data_service.cache_impl),
+            ),
             contact_service=cls._contact_service(config, transports),
             rate_limiter=cls._rate_limiter(config),
             closers=tuple(closers),
@@ -179,6 +190,44 @@ class ServiceContainer:
             ),
             fallback_messages=config.chat.fallback_messages,
             max_messages_per_chat=config.chat.max_messages_per_chat,
+        )
+
+    @staticmethod
+    def _agent_service(
+        config: AppConfig,
+        repository: ChatRepository,
+        aggregator: ContextAggregator,
+        groq: GroqClient,
+        static_loader: StaticLoader,
+        store: TTLKeyValueStore,
+    ) -> AgentService:
+        settings = config.agent
+        selector = ModelSelector(
+            models=[LLMModel(**settings.model.model_dump())],
+            temperature_range=(settings.temperature, settings.temperature),
+            top_p_range=(settings.top_p, settings.top_p),
+        )
+        return AgentService(
+            repository=repository,
+            agent=Agent(
+                groq,
+                selector,
+                owner_name=static_loader.get_profile().profile_details.name,
+                markers=settings.markers,
+                max_completion_tokens=settings.max_completion_tokens,
+            ),
+            scope_gate=ScopeGate(
+                injection_patterns=settings.injection_patterns,
+                context_keywords=settings.context_keywords,
+                default_contexts=settings.default_contexts,
+            ),
+            context_aggregator=aggregator,
+            message_validator=MessageValidator(max_message_chars=settings.max_question_chars),
+            history_window=HistoryWindow(max_messages=settings.max_history_messages, max_chars=settings.max_history_chars),
+            answer_cache=AnswerCache(store=store, ttl=settings.cache_ttl),
+            token_budget=TokenBudget(daily_tokens=settings.daily_token_budget),
+            fallback_messages=config.chat.fallback_messages,
+            max_messages_per_chat=settings.max_messages_per_chat,
         )
 
     @staticmethod

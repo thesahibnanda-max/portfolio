@@ -78,7 +78,8 @@ def test_create_session(client: TestClient) -> None:
 
 def test_chat_lifecycle(client: TestClient, headers: dict[str, str]) -> None:
     created = _assert_envelope(client.post("/chats", json={"title": "Ratings"}, headers=headers), HTTPStatus.CREATED)
-    assert set(created) == {"chat_id", "title", "created_at", "updated_at"}
+    assert set(created) == {"chat_id", "title", "created_at", "updated_at", "origin"}
+    assert created["origin"] == "chat"
     chat_id = created["chat_id"]
 
     default = _assert_envelope(client.post("/chats", headers=headers), HTTPStatus.CREATED)
@@ -98,6 +99,22 @@ def test_chat_lifecycle(client: TestClient, headers: dict[str, str]) -> None:
     deleted = client.delete(f"/chats/{chat_id}", headers=headers)
     assert (deleted.status_code, deleted.content) == (HTTPStatus.NO_CONTENT, b"")
     _assert_error(client.get(f"/chats/{chat_id}", headers=headers), HTTPStatus.NOT_FOUND, "CHAT_NOT_FOUND")
+
+
+def test_chats_record_their_origin(client: TestClient, headers: dict[str, str]) -> None:
+    cli = _assert_envelope(client.post("/chats", json={"title": "Terminal", "origin": "cli"}, headers=headers), HTTPStatus.CREATED)
+    untitled_cli = _assert_envelope(client.post("/chats", json={"origin": "cli"}, headers=headers), HTTPStatus.CREATED)
+    chat = _assert_envelope(client.post("/chats", json={"origin": "chat"}, headers=headers), HTTPStatus.CREATED)
+
+    assert (cli["origin"], untitled_cli["origin"], chat["origin"]) == ("cli", "cli", "chat")
+    assert untitled_cli["title"] == "New chat"
+    listed = _assert_envelope(client.get("/chats", headers=headers), HTTPStatus.OK)["chats"]
+    assert {item["chat_id"]: item["origin"] for item in listed} == {
+        cli["chat_id"]: "cli",
+        untitled_cli["chat_id"]: "cli",
+        chat["chat_id"]: "chat",
+    }
+    _assert_error(client.post("/chats", json={"origin": "web"}, headers=headers), HTTPStatus.BAD_REQUEST, "VALIDATION_ERROR")
 
 
 def test_send_message_answers_and_saves(client: TestClient, headers: dict[str, str], chat_id: str) -> None:

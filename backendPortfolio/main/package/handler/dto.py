@@ -1,10 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
-from main.package.repository import MessageRole
+from main.package.repository import ChatOrigin, MessageRole
 from main.package.service.data import ProfessionalDetails
 from main.package.static.dto import Profile
 
@@ -19,6 +20,7 @@ class _ResponseModel(BaseModel):
 
 class CreateChatRequest(_RequestModel):
     title: str | None = None
+    origin: Literal["chat", "cli"] | None = None
 
 
 class RenameChatRequest(_RequestModel):
@@ -69,6 +71,7 @@ class ChatSummaryResponse(_ResponseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+    origin: ChatOrigin
 
 
 class MessageResponse(_ResponseModel):
@@ -101,6 +104,10 @@ class ContactResponse(_ResponseModel):
 
 class StreamTokenResponse(_ResponseModel):
     text: str
+
+
+class StreamStepResponse(_ResponseModel):
+    label: str
 
 
 class AccountsResponse[T](_ResponseModel):

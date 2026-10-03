@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Any, Self
@@ -22,6 +23,7 @@ from main.config.exceptions import (
     InvalidConfigError,
     MissingEnvironmentVariableError,
 )
+from main.package.ai.common.dto import ContextType
 from main.package.ai.orchestrator.dto import QueryScope
 from main.package.mail.dto import SmtpSecurity
 from main.package.ratelimiter.dto import RateLimitScope
@@ -127,6 +129,41 @@ def _require_fallback_scopes(messages: dict[QueryScope, str]) -> dict[QueryScope
         raise ValueError(f"Fallback messages must cover exactly {sorted(expected)}")
 
     return messages
+
+
+def _require_agent_markers(markers: dict[QueryScope, str]) -> dict[QueryScope, str]:
+    if QueryScope.IN_SCOPE in markers:
+        raise ValueError("IN_SCOPE has no marker")
+
+    values = list(markers.values())
+    if any(value != value.strip() for value in values):
+        raise ValueError("Markers must not have surrounding whitespace")
+
+    if len(set(values)) != len(values) or any(a != b and b.startswith(a) for a in values for b in values):
+        raise ValueError("Markers must be unique and none may be a prefix of another")
+
+    return markers
+
+
+def _require_regex(value: str) -> str:
+    try:
+        re.compile(value)
+    except re.error as error:
+        raise ValueError(f"Invalid regular expression: {error}") from error
+
+    return value
+
+
+def _require_real_contexts(contexts: tuple[ContextType, ...]) -> tuple[ContextType, ...]:
+    if ContextType.NONE in contexts:
+        raise ValueError("NONE is not a context section")
+
+    return contexts
+
+
+def _require_real_context_keys(keywords: dict[ContextType, Any]) -> dict[ContextType, Any]:
+    _require_real_contexts(tuple(keywords))
+    return keywords
 
 
 def _require_whole_seconds(value: timedelta) -> timedelta:
@@ -293,6 +330,26 @@ class ChatConfig(_FrozenConfig):
     ]
 
 
+class AgentConfig(_FrozenConfig):
+    model: LLMModelConfig
+    temperature: Annotated[float, Field(ge=0, le=2)]
+    top_p: Annotated[float, Field(ge=0, le=1)]
+    max_completion_tokens: Annotated[int, Field(strict=True, ge=1)]
+    max_question_chars: Annotated[int, Field(strict=True, ge=1)]
+    max_history_messages: Annotated[int, Field(strict=True, ge=1)]
+    max_history_chars: Annotated[int, Field(strict=True, ge=1)]
+    max_messages_per_chat: Annotated[int, Field(strict=True, ge=2)]
+    cache_ttl: Duration
+    daily_token_budget: Annotated[int, Field(strict=True, ge=1)]
+    markers: Annotated[dict[QueryScope, NonEmptyStr], Field(min_length=1), AfterValidator(_require_agent_markers)]
+    injection_patterns: tuple[Annotated[str, Field(min_length=1), AfterValidator(_require_regex)], ...]
+    default_contexts: Annotated[tuple[ContextType, ...], Field(min_length=1), AfterValidator(_require_real_contexts)]
+    context_keywords: Annotated[
+        dict[ContextType, Annotated[tuple[Annotated[str, AfterValidator(_require_non_blank)], ...], Field(min_length=1)]],
+        AfterValidator(_require_real_context_keys),
+    ]
+
+
 class ContextConfig(_FrozenConfig):
     max_workers: Annotated[int, Field(ge=1)]
     max_github_repositories: Annotated[int, Field(ge=1)]
@@ -356,6 +413,7 @@ class AppConfig(_FrozenConfig):
     repository: RepositoryConfig
     data_service: DataServiceConfig
     chat: ChatConfig
+    agent: AgentConfig
     context: ContextConfig
     rate_limit: RateLimitConfig
     mail: MailConfig

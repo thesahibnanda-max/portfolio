@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from main.package.repository.dto import Chat, ChatSummary, NewMessage, Session
+from main.package.repository.dto import Chat, ChatOrigin, ChatSummary, NewMessage, Session
 
 
 class ChatRepository(ABC):
@@ -14,7 +14,7 @@ class ChatRepository(ABC):
         ...
 
     @abstractmethod
-    def create_chat(self, session_id: str, title: str = "New chat") -> ChatSummary:
+    def create_chat(self, session_id: str, title: str = "New chat", origin: ChatOrigin = ChatOrigin.CHAT) -> ChatSummary:
         ...
 
     @abstractmethod

@@ -32,7 +32,7 @@ from main.config import (
     SmtpAccountConfig,
     TTLKeyValueStoreConfig,
 )
-from main.package.ai.common import LLMModel, ModelSelector
+from main.package.ai.common import ContextType, LLMModel, ModelSelector
 from main.package.ai.orchestrator import Orchestrator, QueryScope
 from main.package.ai.worker import Worker
 from main.package.clients.codeforces import CodeforcesClient
@@ -474,7 +474,7 @@ def test_rate_limit_defaults(config_env: str) -> None:
 
     assert isinstance(config, RateLimitConfig)
     assert (config.storage_uri, config.key_prefix) == ("memory://", "rate_limit")
-    assert set(config.rules) == {"create_session", "chat_read", "chat_write", "chat_message", "details", "contact"}
+    assert set(config.rules) == {"create_session", "chat_read", "chat_write", "chat_message", "agent_message", "details", "contact"}
     assert all(set(rules) == set(RateLimitScope) for rules in config.rules.values())
     assert all(
         isinstance(rule, RateLimitRuleConfig) and rule.window == timedelta(minutes=1)
@@ -488,6 +488,46 @@ def test_rate_limit_defaults(config_env: str) -> None:
         RateLimitScope.GLOBAL: 60,
     }
     assert config.rules["details"][RateLimitScope.IP].limit == 30
+    assert {scope: rule.limit for scope, rule in config.rules["agent_message"].items()} == {
+        RateLimitScope.IP: 6,
+        RateLimitScope.SESSION: 6,
+        RateLimitScope.GLOBAL: 60,
+    }
+
+
+def test_agent_defaults_are_cheap_and_safe(config_env: str) -> None:
+    agent = AppConfig.load().agent
+
+    assert (agent.model.model_id, agent.model.reasoning_effort) == ("openai/gpt-oss-20b", "low")
+    assert (agent.temperature, agent.top_p, agent.max_completion_tokens) == (0.6, 1.0, 600)
+    assert (agent.max_question_chars, agent.max_history_messages, agent.max_history_chars) == (500, 6, 2500)
+    assert agent.cache_ttl == timedelta(hours=6)
+    assert agent.daily_token_budget == 400000
+    assert set(agent.markers) == set(QueryScope) - {QueryScope.IN_SCOPE}
+    assert agent.default_contexts == (ContextType.PROFILE,)
+    assert set(agent.context_keywords) == set(ContextType) - {ContextType.NONE}
+    assert len(agent.injection_patterns) >= 3
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "field"),
+    [
+        ('    UNSAFE: "⟂UNS"', '    IN_SCOPE: "⟂INS"', "agent.markers"),
+        ('    UNSAFE: "⟂UNS"', '    UNSAFE: "⟂OO"', "agent.markers"),
+        ('    UNSAFE: "⟂UNS"', '    UNSAFE: "⟂OOS"', "agent.markers"),
+        ('    UNSAFE: "⟂UNS"', '    UNSAFE: " ⟂UNS"', "agent.markers"),
+        ('    - "\\\\byou are now\\\\b"', '    - "(unclosed"', "agent.injection_patterns"),
+        ("  default_contexts: [PROFILE]", "  default_contexts: [NONE]", "agent.default_contexts"),
+        ("  default_contexts: [PROFILE]", "  default_contexts: []", "agent.default_contexts"),
+        ("    GITHUB:\n", "    NONE:\n", "agent.context_keywords"),
+        ('      - "github"', '      - "   "', "agent.context_keywords"),
+        ("  max_completion_tokens: 600", "  max_completion_tokens: 0", "agent.max_completion_tokens"),
+        ("  max_messages_per_chat: 200\n  cache_ttl", "  max_messages_per_chat: 1\n  cache_ttl", "agent.max_messages_per_chat"),
+    ],
+)
+def test_invalid_agent_values_raise(config_env, tmp_path, old: str, new: str, field: str) -> None:
+    with pytest.raises(InvalidConfigError, match=field.replace(".", r"\.")):
+        _load_variant(tmp_path, old, new)
 
 
 @pytest.mark.parametrize(

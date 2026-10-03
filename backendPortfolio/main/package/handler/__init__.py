@@ -45,7 +45,10 @@ Envelopes:
 Routes (rate-limit api in brackets, see main.package.ratelimiter):
     GET    /health                           200 [none]
     POST   /sessions                         201 SessionResponse [create_session]
-    POST   /chats            {title?}        201 ChatSummaryResponse [chat_write]
+    POST   /chats            {title?, origin?}  201 ChatSummaryResponse [chat_write]
+        origin is "chat" (default) or "cli"; every ChatSummaryResponse
+        carries it, so the chat panel and the terminal share one history
+        and can tag each other's chats.
     GET    /chats                            200 ChatListResponse [chat_read]
     GET    /chats/{chat_id}                  200 ChatResponse [chat_read]
     PATCH  /chats/{chat_id}  {title}         200 ChatSummaryResponse [chat_write]
@@ -54,6 +57,13 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         ChatReplyResponse is {chat, answer, scope, required_contexts}; the
         contexts are the knowledge domains the answer drew on, for source chips.
     POST   /chats/{chat_id}/messages/stream {message}  200 text/event-stream [chat_message]
+    POST   /chats/{chat_id}/agent/stream {message}     200 text/event-stream [agent_message]
+        The Portfolio Agent for the /cli terminal (main.package.service.agent):
+        at most one Groq call, often none. It first sends one or more
+        "step" events {label} (for example "Reading profile · github",
+        "Recalling a saved answer"), then the same token, done and error
+        events as the chat stream. A used-up daily token budget answers 503
+        AGENT_BUDGET_EXHAUSTED before the stream starts.
     GET    /details/professional|leetcode|codeforces|github|profile|personality  200 [details]
         /details/profile also returns profile_image_url, the relative path
         "/details/profile/image?v=<etag>" (the etag changes with the photo).
@@ -112,6 +122,7 @@ Errors (ErrorCatalog.default(), first match along the exception's MRO):
     502 UPSTREAM_ERROR: GroqClientError, DataSourceUnavailableError,
         DataSourceResponseError, OrchestratorResponseError, WorkerResponseError.
     503 UPSTREAM_BUSY: GroqRateLimitError.
+    503 AGENT_BUDGET_EXHAUSTED: AgentBudgetExhaustedError.
     503 MAIL_UNAVAILABLE: MailDeliveryError (every SMTP account failed).
     500 INTERNAL_ERROR: RepositoryOperationError and anything else.
     4xx answers carry the exception's own (user-safe) message. 5xx answers
@@ -132,10 +143,14 @@ Streaming (POST /chats/{chat_id}/messages/stream, FastAPI EventSourceResponse):
     FastAPI adds keep-alive comments and the no-cache and X-Accel-Buffering
     headers. When the client disconnects, the dependency's teardown cancels
     the Groq stream, so nothing is saved and the visitor can retry.
+    The agent stream works the same way through AgentStreamOpener, and
+    sends its "step" events (StreamStepResponse {label}) before the first
+    token.
 
 ServiceContainer.from_config(config, transports=UpstreamTransports()):
     Builds the TTL store factory, the four clients, DataService, StaticLoader,
-    ContextAggregator, SqliteChatRepository, ChatService, the Mailer,
+    ContextAggregator, SqliteChatRepository, ChatService, AgentService (its
+    answer cache uses the data service's TTL store), the Mailer,
     EmailNormalizer and ContactService, and RateLimiter. UpstreamTransports
     lets tests pass httpx transports, an SmtpConnector and a dnspython
     resolver. close() closes

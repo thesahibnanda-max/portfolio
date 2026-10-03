@@ -5,8 +5,8 @@ Exports:
     ChatRepository: the interface (an ABC), so another database can be added
     later without changing callers.
     SqliteChatRepository: the SQLite implementation.
-    Session, ChatSummary, Chat, StoredMessage, NewMessage and the MessageRole
-    alias: the DTOs.
+    Session, ChatSummary, Chat, StoredMessage, NewMessage, the ChatOrigin
+    enum and the MessageRole alias: the DTOs.
     RepositoryError and its subclasses: the errors described under Errors.
 
 Session model:
@@ -39,7 +39,10 @@ InvalidRepositoryArgumentError):
     create_session() -> Session
     get_session(session_id) -> Session: SessionNotFoundError if the session
     does not exist or has expired.
-    create_chat(session_id, title="New chat") -> ChatSummary
+    create_chat(session_id, title="New chat", origin=ChatOrigin.CHAT)
+    -> ChatSummary: origin records where the chat was started, CHAT for the
+    chat panel and CLI for the terminal; both share one session and one
+    list, and every ChatSummary carries its origin.
     list_chats(session_id) -> tuple[ChatSummary, ...]: most recently updated
     first.
     get_chat(session_id, chat_id) -> Chat: the chat with its messages, oldest
@@ -67,13 +70,17 @@ Expiry:
     cleanup. A daemon thread calls delete_expired_sessions() every
     sweep_interval to remove the rows; it logs and survives any error.
 
-Schema (schema.sql, embedded in this package, PRAGMA user_version 1):
+Schema (schema.sql, embedded in this package, PRAGMA user_version 2):
     sessions (session_id, created_at, expires_at), chats (chat_id,
-    session_id, title, created_at, updated_at) and messages (message_id,
+    session_id, title, created_at, updated_at, origin "chat" or "cli") and
+    messages (message_id,
     chat_id, role "user" or "assistant", content, created_at), with foreign
     keys ON DELETE CASCADE and STRICT column types. Times are integer UTC
     microseconds since the epoch; the DTOs expose timezone-aware datetimes.
-    A database written by a newer schema version is refused.
+    A database written by a newer schema version is refused. A version 1
+    database is upgraded in place on startup by adding the origin column
+    (default "chat"), so existing chats keep working; a new database is
+    created at version 2 directly.
 
 Connections and transactions:
     Each operation opens its own short-lived connection, so no connection is
@@ -109,7 +116,7 @@ Example:
 """
 
 from .chat_repository import ChatRepository
-from .dto import Chat, ChatSummary, MessageRole, NewMessage, Session, StoredMessage
+from .dto import Chat, ChatOrigin, ChatSummary, MessageRole, NewMessage, Session, StoredMessage
 from .exceptions import (
     ChatNotFoundError,
     InvalidRepositoryArgumentError,
@@ -125,6 +132,7 @@ __all__ = [
     "SqliteChatRepository",
     "Session",
     "ChatSummary",
+    "ChatOrigin",
     "Chat",
     "StoredMessage",
     "NewMessage",

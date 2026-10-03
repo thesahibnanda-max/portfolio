@@ -10,6 +10,7 @@ from main.package.handler.container import ServiceContainer
 from main.package.handler.dto import SendMessageRequest
 from main.package.handler.exception_handler import ExceptionHandler
 from main.package.handler.responder import Responder
+from main.package.service.agent import AgentTurnStream
 from main.package.service.chat import ChatReplyStream
 
 SESSION_HEADER = "X-Session-Id"
@@ -77,3 +78,13 @@ class ChatStreamOpener:
                 yield stream
             finally:
                 stream.cancel()
+
+
+class AgentStreamOpener:
+    def __call__(self, chat_id: str, body: SendMessageRequest, session_id: SessionId, state: State) -> Iterator[AgentTurnStream]:
+        turn = state.container.agent_service.stream_message(session_id, chat_id, body.message)
+        with turn.replies:
+            try:
+                yield turn
+            finally:
+                turn.replies.cancel()

@@ -15,6 +15,7 @@ import main.package.repository.sqlite_chat_repository as repository_module
 from main.package.repository import (
     Chat,
     ChatNotFoundError,
+    ChatOrigin,
     ChatRepository,
     ChatSummary,
     InvalidRepositoryArgumentError,
@@ -112,7 +113,7 @@ def test_creates_the_database_file_and_folder(repository: SqliteChatRepository, 
 
 def test_schema_is_versioned_and_strict(repository: SqliteChatRepository, database: Path) -> None:
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
         assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         assert {"sessions", "chats", "messages"} <= tables
@@ -356,6 +357,65 @@ def test_data_survives_reopening_the_file(database: Path) -> None:
 
     assert stored.title == "Kept"
     assert len(stored.messages) == 2
+
+
+_VERSION_ONE_SCHEMA = """
+CREATE TABLE sessions (session_id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL) STRICT;
+CREATE TABLE chats (
+    chat_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions (session_id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+) STRICT;
+PRAGMA user_version = 1;
+"""
+
+
+def _version_one_database(database: Path, session_id: str, chat_id: str) -> None:
+    database.parent.mkdir(parents=True)
+    far_future = 2**62
+    with sqlite3.connect(database) as connection:
+        connection.executescript(_VERSION_ONE_SCHEMA)
+        connection.execute("INSERT INTO sessions VALUES (?, 1, ?)", (session_id, far_future))
+        connection.execute("INSERT INTO chats VALUES (?, ?, 'Old chat', 1, 1)", (chat_id, session_id))
+
+
+def test_create_chat_records_its_origin(repository: SqliteChatRepository, session: Session) -> None:
+    default = repository.create_chat(session.session_id)
+    cli = repository.create_chat(session.session_id, "Terminal", ChatOrigin.CLI)
+
+    assert default.origin is ChatOrigin.CHAT
+    assert cli.origin is ChatOrigin.CLI
+    assert [chat.origin for chat in repository.list_chats(session.session_id)] == [ChatOrigin.CLI, ChatOrigin.CHAT]
+    assert repository.get_chat(session.session_id, cli.chat_id).origin is ChatOrigin.CLI
+    assert repository.rename_chat(session.session_id, cli.chat_id, "Renamed").origin is ChatOrigin.CLI
+
+
+@pytest.mark.parametrize("origin", ["cli", None, 1])
+def test_create_chat_rejects_a_non_enum_origin(repository: SqliteChatRepository, session: Session, origin: object) -> None:
+    with pytest.raises(InvalidRepositoryArgumentError, match="origin"):
+        repository.create_chat(session.session_id, "Terminal", origin)
+
+
+def test_origin_column_rejects_unknown_values(repository: SqliteChatRepository, chat: ChatSummary, database: Path) -> None:
+    with sqlite3.connect(database) as connection, pytest.raises(sqlite3.IntegrityError):
+        connection.execute("UPDATE chats SET origin = 'web' WHERE chat_id = ?", (chat.chat_id,))
+
+
+def test_version_one_database_is_upgraded_in_place(database: Path) -> None:
+    session_id, chat_id = str(uuid.uuid7()), str(uuid.uuid7())
+    _version_one_database(database, session_id, chat_id)
+
+    for _ in range(2):
+        with _repository(database) as upgraded:
+            old = upgraded.get_chat(session_id, chat_id)
+            new = upgraded.create_chat(session_id, "Terminal", ChatOrigin.CLI)
+            assert (old.title, old.origin) == ("Old chat", ChatOrigin.CHAT)
+            assert new.origin is ChatOrigin.CLI
+
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
 
 
 def test_newer_schema_version_is_refused(database: Path) -> None:

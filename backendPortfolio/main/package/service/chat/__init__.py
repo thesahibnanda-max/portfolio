@@ -4,7 +4,10 @@ or as a stream, and saves the exchange.
 
 Exports:
     ChatService: the facade with send_message and stream_message.
-    ChatReplyStream: the stream returned by stream_message.
+    ChatReplyStream: the stream returned by stream_message. Its
+    answer_stream may be any AnswerStream (the Protocol it reads: with,
+    next, cancel and close yielding Groq stream events), so the Portfolio
+    Agent's MarkedAnswerStream reuses it unchanged.
     MessageValidator, HistoryWindow: the input and history policies.
     ChatReply, ChatTokenEvent, ChatDoneEvent and the ChatStreamEvent alias:
     the results and stream events.
