@@ -15,6 +15,8 @@ export function noticeFor(error: unknown, now: number): ChatNotice {
         return { kind: "chat-full" };
       case "VALIDATION_ERROR":
         return { kind: "error", message: error.message };
+      case "AGENT_BUDGET_EXHAUSTED":
+        return { kind: "error", message: "The AI has used today's budget. Every slash command still works." };
       case "UPSTREAM_BUSY":
       case "UPSTREAM_ERROR":
         return { kind: "error", message: "The AI is catching its breath. Try again in a moment." };

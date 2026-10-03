@@ -185,7 +185,9 @@ export const chatSummarySchema = z.object({
   title: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
+  origin: z.enum(["chat", "cli"]).default("chat"),
 });
+export type ChatOrigin = "chat" | "cli";
 export type ChatSummary = z.infer<typeof chatSummarySchema>;
 
 export const storedMessageSchema = z.object({
@@ -213,6 +215,8 @@ export const chatReplySchema = z.object({
 export type ChatReply = z.infer<typeof chatReplySchema>;
 
 export const streamTokenSchema = z.object({ text: z.string() });
+
+export const streamStepSchema = z.object({ label: z.string().min(1).max(200) });
 
 export const contactResponseSchema = z.object({ status: z.literal("SENT"), reply_to: z.string(), sent_at: z.string() });
 export type ContactResponse = z.infer<typeof contactResponseSchema>;
