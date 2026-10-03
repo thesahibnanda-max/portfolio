@@ -51,6 +51,12 @@ venv/bin/python -m pytest -m live                    # opt-in tests against the 
 - Rate limits are per IP, per session and global, configured under `rate_limit` in `config.yaml`.
 - **Profile photo:** `/details/profile` returns `profile_image_url` (`/details/profile/image?v=<hash>`). That endpoint serves the photo from `main/package/static/pfp.jpg` with an ETag, 304 support and one-year immutable caching, and **no rate limit**. The frontend downloads it once at build time and ships optimized AVIF/WebP copies, a circular favicon and an Apple touch icon, so visitors never fetch it from the API.
 - **Résumé:** `/details/professional` returns `resume_link` (`/details/resume?v=<hash>`). That endpoint serves `main/package/static/resume.pdf` inline (`Content-Disposition: inline; filename="Sahib_Nanda_Resume.pdf"`) with the same ETag, 304 support, one-year immutable caching and **no rate limit**. To update the résumé, replace the PDF and deploy: the hash, and so the link, changes with it.
+- **Portfolio Agent (for `/cli`):** `POST /chats/{id}/agent/stream {message}` answers in at most one Groq call, often none, configured under `agent` in `config.yaml`:
+  - A rule-based pre-check refuses known injection patterns at 0 tokens, and keywords pick which context sections to send.
+  - First-turn questions are cached for 6 hours, so repeats cost 0 tokens.
+  - One streamed `gpt-oss-20b` call (reasoning "low", at most 600 tokens) both answers and flags off-topic questions with a marker. The server swaps the marker for the configured fallback before the visitor sees it.
+  - A daily token budget returns 503 `AGENT_BUDGET_EXHAUSTED` once it's used up.
+  - It sends `step` events before the tokens and has its own `agent_message` rate limit. Chats carry an `origin` (`chat` or `cli`), so both UIs share one history.
 - **Contact me:** `POST /contact {email, subject, message}` mails the message to `RECIPIENT_MAIL` through a random SMTP account from `mail.accounts`, failing over to the others, with Reply-To set to the visitor. Nothing is stored. The visitor's email is validated (syntax plus a DNS mail check) and normalized (trimmed, lowercased), and the response echoes it as `reply_to`. It's limited to 3 per hour per IP and 50 per day overall.
 - It runs as one gunicorn worker with a large thread pool. The rate limiter and caches are in memory, and the GIL is disabled, so one process uses every core.
 
@@ -76,13 +82,18 @@ The site is static, so both values are read **at build time**. Astro's `astro:en
 | `npm run preview` | Serve the built site on :4321 |
 | `npm run check` | `astro check` (types) + Biome (lint and format) |
 | `npm run format` | Apply Biome fixes |
-| `npm test` | Vitest unit tests: API client, SSE stream parser, session store, chat reducer, formatting |
-| `npm run test:e2e` | Playwright on desktop and mobile with a mocked API: sections, ⌘K chat streaming, 401 renewal, 429 countdown, stop, reduced motion |
+| `npm test` | Vitest unit tests: API client, SSE stream parser, session store, chat reducer, formatting, CLI commands, autocomplete, markdown, terminal reducer |
+| `npm run test:e2e` | Playwright on desktop and mobile with a mocked API: sections, ⌘K chat streaming, 401 renewal, 429 countdown, stop, reduced motion, the `/cli` terminal |
 
 **Structure:**
 - `src/pages/index.astro`: the single page, composed from the build-time snapshot (`src/content/snapshot.ts`).
 - `src/components/sections/`: static sections (hero, experience, projects, competitive programming, open source, skills, achievements, off the clock, contact).
 - `src/components/islands/chat/`: the chat panel, a React island loaded by `src/scripts/chatLauncher.ts` on ⌘K or a click.
+- `src/pages/cli.astro` and `src/components/islands/cli/`: the **Portfolio Agent CLI**, a full-screen terminal opened from the chat panel or the `>_` link in the nav.
+  - Slash commands (`/whoami`, `/experience [company]`, `/projects [name]`, `/skills [area]`, `/education`, `/achievements`, `/stats [platform]`, `/resume`, `/contact`, `/history`, `/open <n>`, `/new`, `/clear`, `/help`, `/go-back`) run in the browser from build-time data at 0 tokens. `/stats` refreshes live.
+  - Plain text goes to the agent.
+  - It has a slash menu with Tab/→ completion and ghost text, ↑↓ history, Esc/Ctrl+C to stop, Ctrl+L to clear, and quick-command chips on phones.
+  - The pure logic lives in `src/lib/cli/`, including a safe markdown subset renderer (React elements only, http/https/mailto links only).
 - `src/lib/api/`: a typed client. Every response is validated with zod at runtime. Errors become `ApiError`, which carries the backend's status, code and `Retry-After`.
 - `src/scripts/`: small vanilla scripts: the hero WebGL shader (ogl), reveals, count-ups, smooth scroll (Lenis), live stats, skill highlighting, and the rating chart (uPlot).
 

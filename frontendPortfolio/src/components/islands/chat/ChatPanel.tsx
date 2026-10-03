@@ -107,6 +107,21 @@ export default function ChatPanel({ isOpen, onClose, ownerName }: ChatPanelProps
           </div>
         </header>
 
+        <a href="/cli" className="cli-entry group" data-cli-entry>
+          <span className="cli-entry-prompt" aria-hidden="true">
+            &gt;_
+          </span>
+          <span className="flex-1">
+            <span className="block text-sm text-text">Portfolio Agent CLI</span>
+            <span className="block font-mono text-[0.65rem] text-faint">
+              A terminal with /commands, autocomplete and the same AI
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-faint transition-transform duration-300 group-hover:translate-x-1">
+            →
+          </span>
+        </a>
+
         <div
           ref={listRef}
           className="flex-1 overflow-y-auto overscroll-contain px-5 py-6"

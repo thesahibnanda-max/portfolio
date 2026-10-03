@@ -1,0 +1,35 @@
+---
+import Terminal from "../components/islands/cli/Terminal";
+import { builtAt, codeforces, github, leetcode, professional, profile, resumeUrl } from "../content/snapshot";
+import CliLayout from "../layouts/CliLayout.astro";
+import type { CliData } from "../lib/cli/data";
+
+const TOP_REPOSITORIES = 5;
+const ownerName = profile.profile_details.name;
+
+const data: CliData = {
+  ownerName,
+  profile,
+  professional,
+  leetcode: leetcode.accounts,
+  codeforces: codeforces.accounts,
+  github: github.accounts.map((account) => ({
+    ...account,
+    repositories: [...account.repositories].sort((left, right) => right.stars - left.stars).slice(0, TOP_REPOSITORIES),
+  })),
+  resumeUrl,
+  builtAt: builtAt.toISOString(),
+};
+---
+
+<CliLayout
+  title={`${ownerName} — Portfolio Agent CLI`}
+  description={`A terminal for ${ownerName}'s portfolio: slash commands for experience, projects and stats, plus an AI agent that answers questions about him.`}
+>
+  <noscript>
+    <p class="p-6 font-mono text-sm text-muted">
+      The Portfolio Agent CLI needs JavaScript. <a href="/" class="text-accent underline">Back to the portfolio</a>.
+    </p>
+  </noscript>
+  <Terminal client:load data={data} />
+</CliLayout>

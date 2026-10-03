@@ -68,7 +68,15 @@ export function HistoryDrawer({ chats, activeChatId, onClose, onOpen, onRename, 
                     >
                       {chat.title}
                     </span>
-                    <span className="font-mono text-[0.65rem] text-faint">
+                    <span className="flex items-center gap-2 font-mono text-[0.65rem] text-faint">
+                      {chat.origin === "cli" && (
+                        <span
+                          className="rounded border border-accent/30 px-1 text-accent"
+                          title="Started in the Portfolio Agent CLI"
+                        >
+                          cli
+                        </span>
+                      )}
                       {dateFormat.format(new Date(chat.updated_at))}
                     </span>
                   </button>

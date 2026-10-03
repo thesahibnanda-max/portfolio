@@ -10,6 +10,8 @@ export interface MockOptions {
   readonly expireFirstSession?: boolean;
   readonly rateLimitStream?: boolean;
   readonly holdStream?: boolean;
+  readonly rateLimitAgent?: boolean;
+  readonly agentAnswer?: string;
 }
 
 function envelope(data: unknown, status = 200) {
@@ -20,8 +22,24 @@ function session(id: string) {
   return { session_id: id, created_at: NOW, expires_at: "2099-01-01T00:00:00Z" };
 }
 
-function chat(id: string) {
-  return { chat_id: id, title: "What's his Codeforces peak rating?", created_at: NOW, updated_at: NOW };
+function chat(id: string, origin: "chat" | "cli" = "chat", title = "What's his Codeforces peak rating?") {
+  return { chat_id: id, title, created_at: NOW, updated_at: NOW, origin };
+}
+
+function agentBody(chatId: string, answer: string): string {
+  const reply = {
+    chat: { ...chat(chatId, "cli"), messages: [] },
+    answer,
+    scope: "IN_SCOPE",
+    required_contexts: ["PROFILE"],
+  };
+  const middle = Math.ceil(answer.length / 2);
+  return [
+    'event: step\ndata: {"label":"Reading profile · github"}\n\n',
+    `event: token\ndata: ${JSON.stringify({ text: answer.slice(0, middle) })}\n\n`,
+    `event: token\ndata: ${JSON.stringify({ text: answer.slice(middle) })}\n\n`,
+    `event: done\ndata: ${envelope(reply)}\n\n`,
+  ].join("");
 }
 
 function streamBody(chatId: string): string {
@@ -42,6 +60,8 @@ export class MockApi {
   readonly sessionsCreated: string[] = [];
   readonly streamSessions: string[] = [];
   readonly contactBodies: unknown[] = [];
+  readonly createdChats: unknown[] = [];
+  readonly agentQuestions: string[] = [];
   #releaseStream: (() => void) | null = null;
 
   constructor(private readonly options: MockOptions = {}) {}
@@ -70,11 +90,34 @@ export class MockApi {
       return;
     }
     if (url.pathname === "/chats" && request.method() === "POST") {
-      await json(route, 201, envelope(chat(`chat-for-${sessionId}`), 201));
+      const body = (request.postDataJSON() ?? {}) as { origin?: "chat" | "cli"; title?: string };
+      this.createdChats.push(body);
+      const prefix = body.origin === "cli" ? "cli-chat" : "chat";
+      await json(route, 201, envelope(chat(`${prefix}-for-${sessionId}`, body.origin ?? "chat", body.title), 201));
       return;
     }
     if (url.pathname === "/chats" && request.method() === "GET") {
-      await json(route, 200, envelope({ chats: [] }));
+      await json(
+        route,
+        200,
+        envelope({
+          chats:
+            this.createdChats.length === 0 ? [] : [chat(`cli-chat-for-${sessionId}`, "cli", "Earlier terminal chat")],
+        }),
+      );
+      return;
+    }
+    if (/^\/chats\/[^/]+$/.test(url.pathname) && request.method() === "GET") {
+      const id = url.pathname.split("/")[2] ?? "";
+      const messages = [
+        { message_id: 1, role: "user", content: "Who is he?", created_at: NOW },
+        { message_id: 2, role: "assistant", content: "A **backend** engineer.", created_at: NOW },
+      ];
+      await json(route, 200, envelope({ ...chat(id, "cli", "Earlier terminal chat"), messages }));
+      return;
+    }
+    if (url.pathname.endsWith("/agent/stream")) {
+      await this.#agentStream(route, url.pathname.split("/")[2] ?? "");
       return;
     }
     if (url.pathname.endsWith("/messages/stream")) {
@@ -127,6 +170,31 @@ export class MockApi {
         await json(route, 503, errorBody(503, "MAIL_UNAVAILABLE"));
         return;
     }
+  }
+
+  async #agentStream(route: Route, chatId: string): Promise<void> {
+    const body = route.request().postDataJSON() as { message: string };
+    this.agentQuestions.push(body.message);
+    if (this.options.rateLimitAgent === true) {
+      await route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        headers: { ...corsHeaders(), "Retry-After": "42" },
+        body: errorBody(429, "RATE_LIMITED"),
+      });
+      return;
+    }
+    if (this.options.holdStream === true) {
+      await new Promise<void>((resolve) => {
+        this.#releaseStream = resolve;
+      });
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: corsHeaders(),
+      body: agentBody(chatId, this.options.agentAnswer ?? "Sahib is a **backend engineer** who builds `Go` systems."),
+    });
   }
 
   async #stream(route: Route, sessionId: string, chatId: string): Promise<void> {
