@@ -94,6 +94,7 @@ void main() {
 `;
 
 const MAX_DPR = 1.25;
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
 
 const SLOW_FRAME_MS = 34;
 const FRAMES_TO_SAMPLE = 30;
@@ -125,6 +126,11 @@ async function mountShader(canvas: HTMLCanvasElement, reducedMotion: boolean): P
   const baseDpr = Math.min(window.devicePixelRatio, MAX_DPR) * 0.75;
   const renderer = new Renderer({ canvas, dpr: baseDpr, alpha: false });
   const gl = renderer.gl;
+  if (isSoftwareRenderer(gl)) {
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    canvas.hidden = true;
+    return;
+  }
 
   const uniforms = {
     uTime: { value: 0 },
@@ -229,4 +235,10 @@ async function mountShader(canvas: HTMLCanvasElement, reducedMotion: boolean): P
 
   play();
   requestAnimationFrame(() => canvas.classList.remove("opacity-0"));
+}
+
+export function isSoftwareRenderer(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = info === null ? gl.getParameter(gl.RENDERER) : gl.getParameter(info.UNMASKED_RENDERER_WEBGL);
+  return typeof renderer === "string" && SOFTWARE_RENDERER.test(renderer);
 }
