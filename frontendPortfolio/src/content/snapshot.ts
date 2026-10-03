@@ -26,4 +26,7 @@ export const [profile, personality, professional, leetcode, codeforces, github] 
   load("/details/github", accountsSchema(githubAccountSchema)),
 ]);
 
+export const profileImageUrl = client.url(profile.profile_image_url);
+export const profileImage = await client.requestBytes(profile.profile_image_url);
+
 export const builtAt = new Date();

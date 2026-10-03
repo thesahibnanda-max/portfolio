@@ -49,6 +49,7 @@ venv/bin/python -m pytest -m live                    # opt-in tests against the 
 - Each package documents itself in its `__init__.py` docstring.
 - Every response is an envelope: `{status, timestamp, data}` on success, `{status, timestamp, error, message, details}` on error.
 - Rate limits are per IP, per session and global, configured under `rate_limit` in `config.yaml`.
+- **Profile photo:** `/details/profile` returns `profile_image_url` (`/details/profile/image?v=<hash>`). That endpoint serves the photo from `main/package/static/pfp.jpg` with an ETag, 304 support and one-year immutable caching, and **no rate limit**. The frontend downloads it once at build time and ships optimized AVIF/WebP copies, a circular favicon and an Apple touch icon, so visitors never fetch it from the API.
 - **Contact me:** `POST /contact {email, subject, message}` mails the message to `RECIPIENT_MAIL` through a random SMTP account from `mail.accounts`, failing over to the others, with Reply-To set to the visitor. Nothing is stored. The visitor's email is validated (syntax plus a DNS mail check) and normalized (trimmed, lowercased), and the response echoes it as `reply_to`. It's limited to 3 per hour per IP and 50 per day overall.
 - It runs as one gunicorn worker with a large thread pool. The rate limiter and caches are in memory, and the GIL is disabled, so one process uses every core.
 
