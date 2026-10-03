@@ -77,3 +77,15 @@ test("sends a normalized email and has no honeypot field", async ({ page }) => {
   expect(api.contactBodies).toEqual([expect.objectContaining({ email: "visitor@example.com" })]);
   await expect(page.locator('[name="website"]')).toHaveCount(0);
 });
+
+test("lists profiles and the résumé but not the outdated website", async ({ page }) => {
+  await new MockApi().install(page);
+  await page.goto("/");
+  const contact = page.locator("#contact");
+
+  for (const label of ["GitHub", "LinkedIn", "X", "LeetCode", "Codeforces", "Résumé"]) {
+    await expect(contact.getByRole("link", { name: new RegExp(`^${label}(\\s|$)`) })).toHaveCount(1);
+  }
+  await expect(contact.getByRole("link", { name: /Website/ })).toHaveCount(0);
+  await expect(page.locator('a[href*="sahib-nanda-portfolio.vercel.app"]')).toHaveCount(0);
+});
