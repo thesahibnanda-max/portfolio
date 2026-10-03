@@ -51,7 +51,6 @@ def data_service(upstream: Upstream, factory: TTLKeyValueStoreFactory) -> DataSe
         leetcode_accounts=LEETCODE_ACCOUNTS,
         codeforces_accounts=CODEFORCES_ACCOUNTS,
         github_accounts=GITHUB_ACCOUNTS,
-        resume_link="https://storage.test/resume.pdf",
         profile_photo_links=(),
         leetcode_profile_url_format="{base_url}/u/{username}/",
         codeforces_profile_url_format="{base_url}/profile/{username}",

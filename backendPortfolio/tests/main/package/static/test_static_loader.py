@@ -15,7 +15,7 @@ from main.package.static import (
     InvalidStaticDataError,
     Personality,
     Profile,
-    ProfileImage,
+    StaticAsset,
     StaticDataError,
     StaticFileNotFoundError,
     StaticLoader,
@@ -26,6 +26,7 @@ STATIC_DIR = Path(main.package.static.__file__).parent
 PROFILE_PATH = STATIC_DIR / "profile.json"
 PERSONALITY_PATH = STATIC_DIR / "personality.json"
 IMAGE_PATH = STATIC_DIR / "pfp.jpg"
+RESUME_PATH = STATIC_DIR / "resume.pdf"
 PYPROJECT_PATH = STATIC_DIR.parents[2] / "pyproject.toml"
 PROFILE_JSON = json.loads(PROFILE_PATH.read_text())
 PERSONALITY_JSON = json.loads(PERSONALITY_PATH.read_text())
@@ -66,10 +67,12 @@ def _point_at(
     profile: Path = PROFILE_PATH,
     personality: Path = PERSONALITY_PATH,
     image: Path = IMAGE_PATH,
+    resume: Path = RESUME_PATH,
 ) -> None:
     monkeypatch.setattr(static_module, "_PROFILE_PATH", profile)
     monkeypatch.setattr(static_module, "_PERSONALITY_PATH", personality)
     monkeypatch.setattr(static_module, "_PROFILE_IMAGE_PATH", image)
+    monkeypatch.setattr(static_module, "_RESUME_PATH", resume)
 
 
 def _read_many(loader: StaticLoader, count: int) -> tuple[int, int]:
@@ -129,14 +132,15 @@ def test_files_are_read_once_at_construction_and_never_again(monkeypatch: pytest
     monkeypatch.setattr(Path, "read_bytes", partialmethod(counter.read))
 
     static_loader = StaticLoader()
-    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH]
+    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH, RESUME_PATH]
 
     for _ in range(1000):
         static_loader.get_profile()
         static_loader.get_personality()
         static_loader.get_profile_image()
+        static_loader.get_resume()
 
-    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH]
+    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH, RESUME_PATH]
 
 
 def test_editing_files_after_construction_changes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -156,6 +160,7 @@ def test_reads_the_files_next_to_the_module() -> None:
     assert static_module._PROFILE_PATH == PROFILE_PATH
     assert static_module._PERSONALITY_PATH == PERSONALITY_PATH
     assert static_module._PROFILE_IMAGE_PATH == IMAGE_PATH
+    assert static_module._RESUME_PATH == RESUME_PATH
 
 
 def test_works_from_any_working_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -278,7 +283,7 @@ def test_loads_the_profile_photo_with_a_content_hash_etag(loader: StaticLoader) 
     image = loader.get_profile_image()
     content = IMAGE_PATH.read_bytes()
 
-    assert isinstance(image, ProfileImage)
+    assert isinstance(image, StaticAsset)
     assert image.content == content
     assert image.media_type == "image/jpeg"
     assert image.etag == hashlib.sha256(content).hexdigest()[:16]
@@ -312,20 +317,53 @@ def test_non_jpeg_profile_photo_raises(tmp_path: Path, monkeypatch: pytest.Monke
     path.write_bytes(content)
     _point_at(monkeypatch, image=path)
 
-    with pytest.raises(InvalidStaticDataError, match="not a JPEG"):
+    with pytest.raises(InvalidStaticDataError, match="not a valid image/jpeg file"):
         StaticLoader()
 
 
-def test_profile_image_rejects_bad_fields() -> None:
+def test_static_asset_rejects_bad_fields() -> None:
     with pytest.raises(ValidationError):
-        ProfileImage(content=b"", media_type="image/jpeg", etag="0" * 16)
+        StaticAsset(content=b"", media_type="image/jpeg", etag="0" * 16)
     with pytest.raises(ValidationError):
-        ProfileImage(content=b"\xff\xd8\xff", media_type="text/html", etag="0" * 16)
+        StaticAsset(content=b"\xff\xd8\xff", media_type="text/html", etag="0" * 16)
     with pytest.raises(ValidationError):
-        ProfileImage(content=b"\xff\xd8\xff", media_type="image/jpeg", etag="not-hex")
+        StaticAsset(content=b"\xff\xd8\xff", media_type="image/jpeg", etag="not-hex")
 
 
-def test_package_data_ships_the_photo() -> None:
+def test_loads_the_resume_with_a_content_hash_etag(loader: StaticLoader) -> None:
+    resume = loader.get_resume()
+    content = RESUME_PATH.read_bytes()
+
+    assert isinstance(resume, StaticAsset)
+    assert resume.content == content
+    assert resume.content.startswith(b"%PDF-")
+    assert resume.media_type == "application/pdf"
+    assert resume.etag == hashlib.sha256(content).hexdigest()[:16]
+    assert loader.get_resume() is resume
+    assert "content" not in repr(resume)
+
+
+def test_missing_resume_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _point_at(monkeypatch, resume=tmp_path / "no-resume.pdf")
+
+    with pytest.raises(StaticFileNotFoundError, match="no-resume.pdf") as error:
+        StaticLoader()
+
+    assert isinstance(error.value.__cause__, FileNotFoundError)
+
+
+@pytest.mark.parametrize("content", [b"", b"\xff\xd8\xff", b"<html>resume</html>", b"%PD"])
+def test_non_pdf_resume_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: bytes) -> None:
+    path = tmp_path / "resume.pdf"
+    path.write_bytes(content)
+    _point_at(monkeypatch, resume=path)
+
+    with pytest.raises(InvalidStaticDataError, match="not a valid application/pdf file"):
+        StaticLoader()
+
+
+def test_package_data_ships_the_photo_and_resume() -> None:
     package_data = tomllib.loads(PYPROJECT_PATH.read_text())["tool"]["setuptools"]["package-data"]
 
     assert "*.jpg" in package_data["main.package.static"]
+    assert "*.pdf" in package_data["main.package.static"]

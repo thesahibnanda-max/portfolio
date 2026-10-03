@@ -394,7 +394,7 @@ def test_data_service_defaults(config_env: str) -> None:
         ("thesahibnanda", timedelta(minutes=120)),
     ]
     assert all(isinstance(account, PlatformAccountConfig) for account in data.github_accounts)
-    assert data.resume_link.endswith("Sahib_Nanda_Resume.pdf")
+    assert "resume_link" not in type(data).model_fields
     assert len(data.profile_photo_links) == 2
     assert data.leetcode_profile_url_format == "{base_url}/u/{username}/"
     assert data.codeforces_profile_url_format == "{base_url}/profile/{username}"
@@ -408,7 +408,7 @@ def test_data_service_defaults(config_env: str) -> None:
         ('      cache_ttl: "1h"', '      cache_ttl: "0s"', "data_service.leetcode_accounts"),
         ('    - username: "thesahibnanda"\n', '    - username: "thesahibnanda-max"\n', "data_service.github_accounts"),
         ('    - username: "shisukenohara"\n', '    - username: ""\n', "data_service.codeforces_accounts"),
-        ('  resume_link: "https://', '  resume_link: "ftp://', "data_service.resume_link"),
+        ("  profile_photo_links:\n", '  resume_link: "https://storage.test/resume.pdf"\n  profile_photo_links:\n', "data_service.resume_link"),
         ('"{base_url}/u/{username}/"', '"{base_url}/u/"', "data_service.leetcode_profile_url_format"),
         ('"{base_url}/profile/{username}"', '"{base_url}/profile/{username}/{extra}"', "data_service.codeforces_profile_url_format"),
     ],

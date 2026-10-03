@@ -277,7 +277,6 @@ class DataServiceConfig(_FrozenConfig):
     leetcode_accounts: PlatformAccounts
     codeforces_accounts: PlatformAccounts
     github_accounts: PlatformAccounts
-    resume_link: HttpUrlStr
     profile_photo_links: tuple[HttpUrlStr, ...]
     leetcode_profile_url_format: ProfileUrlFormat
     codeforces_profile_url_format: ProfileUrlFormat

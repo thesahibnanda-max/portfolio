@@ -120,7 +120,6 @@ Sections and fields (defaults are written in config.yaml):
         Duration. Defaults: LeetCode imsahibnanda 1h; Codeforces
         shisukenohara 80m; GitHub thesahibnanda-max 45m and thesahibnanda
         120m.
-        resume_link: URL of the resume PDF.
         profile_photo_links: list of photo URLs.
         leetcode_profile_url_format, codeforces_profile_url_format:
         str.format templates using exactly {base_url} and {username}.

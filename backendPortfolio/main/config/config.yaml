@@ -75,7 +75,6 @@ data_service:
       cache_ttl: "45m"
     - username: "thesahibnanda"
       cache_ttl: "120m"
-  resume_link: "https://zaiwjonzbotyjmoghqzh.supabase.co/storage/v1/object/public/portfolio/Sahib_Nanda_Resume.pdf"
   profile_photo_links:
     - "https://zaiwjonzbotyjmoghqzh.supabase.co/storage/v1/object/public/portfolio/ProPic1.png"
     - "https://zaiwjonzbotyjmoghqzh.supabase.co/storage/v1/object/public/portfolio/ProPic2.png"

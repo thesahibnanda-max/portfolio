@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
 from main.package.repository import MessageRole
+from main.package.service.data import ProfessionalDetails
 from main.package.static.dto import Profile
 
 
@@ -108,3 +109,7 @@ class AccountsResponse[T](_ResponseModel):
 
 class ProfileResponse(Profile):
     profile_image_url: str
+
+
+class ProfessionalResponse(ProfessionalDetails):
+    resume_link: str

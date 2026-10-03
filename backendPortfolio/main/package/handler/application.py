@@ -11,8 +11,8 @@ from main.package.handler import (
     contact_routes,
     details_routes,
     health_routes,
-    profile_image_routes,
     session_routes,
+    static_asset_routes,
 )
 from main.package.handler.container import ServiceContainer
 from main.package.handler.error_catalog import ErrorCatalog
@@ -54,7 +54,7 @@ class ApplicationFactory:
             session_routes.router,
             chat_routes.router,
             details_routes.router,
-            profile_image_routes.router,
+            static_asset_routes.router,
             contact_routes.router,
         ):
             app.include_router(router)

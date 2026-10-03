@@ -26,8 +26,8 @@ Runtime and why it is fast:
     default 64), truly in parallel on every core because the GIL is off. One
     worker is the default because the rate limiter, data cache and Groq key
     rotation are in memory; more workers would each keep their own.
-    Routes that never block (health, profile, personality) are async def and
-    skip the threadpool hop.
+    Routes that never block (health, profile, personality, photo, résumé)
+    are async def and skip the threadpool hop.
     Responses are built by Responder as PydanticJSONResponse, whose render()
     is pydantic-core's Rust to_json, so FastAPI's re-validation,
     jsonable_encoder and stdlib json are skipped (orjson has no 3.14t
@@ -57,12 +57,19 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
     GET    /details/professional|leetcode|codeforces|github|profile|personality  200 [details]
         /details/profile also returns profile_image_url, the relative path
         "/details/profile/image?v=<etag>" (the etag changes with the photo).
+        /details/professional returns ProfessionalResponse, whose
+        resume_link is the relative path "/details/resume?v=<etag>" (the
+        etag changes with the résumé).
     GET|HEAD /details/profile/image  200 image/jpeg, or 304 [not rate limited]
-        Serves the photo from memory with ETag and Cache-Control "public,
-        max-age=31536000, immutable"; If-None-Match with the current ETag
-        (weak or strong, or "*") answers 304. Deliberately outside every
-        rate limit: it is static bytes that browsers and proxies cache for
-        a year, so a busy visitor can never make the photo fail.
+    GET|HEAD /details/resume         200 application/pdf, or 304 [not rate limited]
+        Both serve a StaticAsset from memory with ETag and Cache-Control
+        "public, max-age=31536000, immutable"; If-None-Match with the
+        current ETag (weak or strong, or "*") answers 304. The résumé also
+        sends Content-Disposition: inline; filename="<Name>_Resume.pdf",
+        built from the profile name, so it opens in the browser and saves
+        with a readable name. Deliberately outside every rate limit: they
+        are static bytes that browsers and proxies cache for a year, so a
+        busy visitor can never make the photo or the résumé fail.
     POST   /contact {email, subject, message}  200 ContactResponse {status: "SENT", reply_to, sent_at} [contact]
         Mails the message to the owner (main.package.service.contact); no
         session needed. The email is validated (syntax and a DNS mail
@@ -154,6 +161,7 @@ from .application import ApplicationFactory
 from .container import ServiceContainer, UpstreamTransports
 from .dto import (
     AccountsResponse,
+    ProfessionalResponse,
     ProfileResponse,
     ContactRequest,
     ContactResponse,
@@ -198,6 +206,7 @@ __all__ = [
     "CreateChatRequest",
     "RenameChatRequest",
     "SendMessageRequest",
+    "ProfessionalResponse",
     "ProfileResponse",
     "ContactRequest",
     "ContactResponse",
