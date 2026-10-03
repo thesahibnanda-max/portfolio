@@ -1,7 +1,7 @@
 ---
 import type { Professional } from "../../lib/api/schemas";
 import { CONTACT_LIMITS } from "../../lib/contact/contactForm";
-import { hostname, profileHandle } from "../../lib/format";
+import { profileHandle } from "../../lib/format";
 
 interface Props {
   readonly email: string;
@@ -23,11 +23,6 @@ const links = [
     : [{ label: "X", url: professional.twitter_url, note: profileHandle(professional.twitter_url) }]),
   ...professional.leetcode_links.map((url) => ({ label: "LeetCode", url, note: profileHandle(url) })),
   ...professional.codeforces_links.map((url) => ({ label: "Codeforces", url, note: profileHandle(url) })),
-  ...professional.websites.map((url) => ({
-    label: "Website",
-    url,
-    note: hostname(url).split(".")[0] ?? hostname(url),
-  })),
   { label: "Résumé", url: resumeUrl, note: "PDF" },
 ];
 const year = new Date().getUTCFullYear();
