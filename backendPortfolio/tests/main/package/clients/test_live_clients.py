@@ -98,7 +98,6 @@ def test_data_service_end_to_end(config: AppConfig, leetcode: LeetcodeClient, co
         leetcode_accounts=[PlatformAccount(**account.model_dump()) for account in data.leetcode_accounts],
         codeforces_accounts=[PlatformAccount(**account.model_dump()) for account in data.codeforces_accounts],
         github_accounts=[PlatformAccount(**account.model_dump()) for account in data.github_accounts],
-        resume_link=data.resume_link,
         profile_photo_links=data.profile_photo_links,
         leetcode_profile_url_format=data.leetcode_profile_url_format,
         codeforces_profile_url_format=data.codeforces_profile_url_format,

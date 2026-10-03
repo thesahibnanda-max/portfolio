@@ -200,9 +200,9 @@ class Personality(_StaticModel):
     personal_profile: PersonalProfile
 
 
-class ProfileImage(BaseModel):
+class StaticAsset(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     content: Annotated[bytes, Field(min_length=1, repr=False)]
-    media_type: Annotated[str, Field(pattern=r"^image/[a-z0-9.+-]+$")]
+    media_type: Annotated[str, Field(pattern=r"^(image|application)/[a-z0-9.+-]+$")]
     etag: Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]

@@ -27,6 +27,7 @@ export const [profile, personality, professional, leetcode, codeforces, github] 
 ]);
 
 export const profileImageUrl = client.url(profile.profile_image_url);
+export const resumeUrl = client.url(professional.resume_link);
 export const profileImage = await client.requestBytes(profile.profile_image_url);
 
 export const builtAt = new Date();

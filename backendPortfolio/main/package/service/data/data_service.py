@@ -39,7 +39,6 @@ class DataService:
         leetcode_accounts: Sequence[PlatformAccount],
         codeforces_accounts: Sequence[PlatformAccount],
         github_accounts: Sequence[PlatformAccount],
-        resume_link: str,
         profile_photo_links: Sequence[str],
         leetcode_profile_url_format: str,
         codeforces_profile_url_format: str,
@@ -53,7 +52,6 @@ class DataService:
         self._leetcode_accounts = self._require_accounts("leetcode_accounts", leetcode_accounts)
         self._codeforces_accounts = self._require_accounts("codeforces_accounts", codeforces_accounts)
         self._github_accounts = self._require_accounts("github_accounts", github_accounts)
-        self._resume_link = self._require_http_url("resume_link", resume_link)
         self._profile_photo_links = tuple(
             self._require_http_url("profile_photo_links", link) for link in self._require_sequence("profile_photo_links", profile_photo_links)
         )
@@ -110,7 +108,6 @@ class DataService:
                 self._codeforces_profile_url_format, self._codeforces_base_url, self._codeforces_accounts
             ),
             github_links=tuple(details.html_url for details in github if details.html_url),
-            resume_link=self._resume_link,
             profile_photo_links=self._profile_photo_links,
             websites=leetcode.websites,
             twitter_url=leetcode.twitter_url,

@@ -10,7 +10,16 @@ import Projects from "../components/sections/Projects.astro";
 import SignalStrip from "../components/sections/SignalStrip.astro";
 import Skills from "../components/sections/Skills.astro";
 import Nav from "../components/ui/Nav.astro";
-import { codeforces, github, leetcode, personality, professional, profile, profileImageUrl } from "../content/snapshot";
+import {
+  codeforces,
+  github,
+  leetcode,
+  personality,
+  professional,
+  profile,
+  profileImageUrl,
+  resumeUrl,
+} from "../content/snapshot";
 import Base from "../layouts/Base.astro";
 
 const now = new Date();
@@ -63,7 +72,7 @@ const links = [
       tagline={tagline}
       codeforces={codeforces.accounts[0]}
       leetcode={primaryLeetcode}
-      resumeLink={professional.resume_link}
+      resumeUrl={resumeUrl}
       profileImageUrl={profileImageUrl}
     />
     <SignalStrip technologies={technologies} />
@@ -84,6 +93,7 @@ const links = [
       name={name}
       professional={professional}
       linkedinUrl={primaryLeetcode?.linkedin_url ?? null}
+      resumeUrl={resumeUrl}
     />
   </main>
   <div data-chat-root data-owner-name={name.split(" ")[0] ?? name}></div>

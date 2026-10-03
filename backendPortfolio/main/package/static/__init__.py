@@ -1,20 +1,22 @@
 """
-The site owner's profile, personality and profile photo, read from files in
-this package once and then served from memory.
+The site owner's profile, personality, profile photo and résumé, read from
+files in this package once and then served from memory.
 
 Exports:
     StaticLoader: loads the files once and returns them on every call.
-    ProfileImage: the profile photo (content, media_type, etag).
+    StaticAsset: a binary file served as-is (content, media_type, etag); used
+    for the profile photo and the résumé.
     Profile, Personality and the nested DTOs they are built from.
     StaticDataError and its subclasses: the errors described under Errors.
 
 Load once:
     StaticLoader() takes no arguments and does not depend on
     main.config.AppConfig. It reads profile.json and personality.json from
-    this package's own folder, so it works from any working directory.
+    this package's own folder (with pfp.jpg and resume.pdf), so it works
+    from any working directory.
     The constructor reads, parses and validates every file immediately and
-    keeps the results. get_profile(), get_personality() and
-    get_profile_image() then return those same objects on every call: no
+    keeps the results. get_profile(), get_personality(), get_profile_image()
+    and get_resume() then return those same objects on every call: no
     file access, no parsing, no lock.
     Loading in the constructor means the data is ready as soon as the loader
     exists, a missing or broken file fails at startup instead of on the
@@ -64,7 +66,7 @@ Files and DTOs:
             lifestyle: Lifestyle (four bools)
             languages: tuple of SpokenLanguage (name, proficiency)
 
-    pfp.jpg -> ProfileImage
+    pfp.jpg -> StaticAsset
         content: the JPEG bytes (hidden from repr). media_type: "image/jpeg".
         etag: the first 16 hex characters of the content's SHA-256, which
         changes whenever the photo does, so it can version URLs and answer
@@ -73,12 +75,17 @@ Files and DTOs:
         is kept out of Profile so the profile stays plain JSON data; the API
         serves it from its own endpoint.
 
+    resume.pdf -> StaticAsset
+        The same shape as the photo with media_type "application/pdf". The
+        file must start with the PDF signature (%PDF-). Replacing the file
+        changes the etag, so the versioned résumé URL changes with it.
+
 Errors (all in exceptions.py, all subclasses of StaticDataError):
     StaticFileNotFoundError: a file does not exist; FileNotFoundError is
     chained as __cause__.
     InvalidStaticDataError: a file is not valid JSON or does not match its
-    DTO (missing or unknown field, wrong type, bad date), or pfp.jpg is not
-    a JPEG. The message names
+    DTO (missing or unknown field, wrong type, bad date), pfp.jpg is not a
+    JPEG or resume.pdf is not a PDF. The message names
     the file and every failing field; pydantic's ValidationError is chained
     as __cause__.
     Catch StaticDataError to handle every failure at once.
@@ -110,7 +117,6 @@ from .dto import (
     Lifestyle,
     PersonalityTraits,
     Personality,
-    ProfileImage,
     PersonalProfile,
     PhysicalAppearance,
     Profile,
@@ -120,6 +126,7 @@ from .dto import (
     SportFavorite,
     Sports,
     SportsIcons,
+    StaticAsset,
     TitledFavorite,
     WorkPreferences,
 )
@@ -132,7 +139,7 @@ from .static import StaticLoader
 
 __all__ = [
     "StaticLoader",
-    "ProfileImage",
+    "StaticAsset",
     "Profile",
     "ProfileDetails",
     "Project",

@@ -86,7 +86,6 @@ class ProfessionalDetails(_FrozenModel):
     leetcode_links: tuple[str, ...]
     codeforces_links: tuple[str, ...]
     github_links: tuple[str, ...]
-    resume_link: str
     profile_photo_links: tuple[str, ...]
     websites: tuple[str, ...]
     twitter_url: str | None = None

@@ -46,7 +46,7 @@ Construction:
         leetcode_client, codeforces_client, github_client,
         ttl_key_value_store_factory, cache_impl,
         leetcode_accounts, codeforces_accounts, github_accounts,
-        resume_link, profile_photo_links,
+        profile_photo_links,
         leetcode_profile_url_format, codeforces_profile_url_format,
         max_workers,
     )
@@ -54,7 +54,7 @@ Construction:
     cache_impl choose the cache backend. Each *_accounts is a non-empty
     sequence of PlatformAccount(username, cache_ttl) with unique usernames,
     in display order; the first LeetCode account is the primary one.
-    resume_link and profile_photo_links are http(s) URLs. The profile URL
+    profile_photo_links are http(s) URLs. The profile URL
     formats are str.format templates using {base_url} and {username}, for
     example "{base_url}/u/{username}/". max_workers sizes the thread pool.
     All of these come from main.config.AppConfig.data_service. A bad
@@ -68,7 +68,7 @@ Methods:
     parallel on the free-threaded Python 3.14t build.
     get_professional_details() -> ProfessionalDetails: profile links built
     from the URL formats and the clients' base URLs, GitHub profile links,
-    the resume and photo links, and the websites and Twitter link from the
+    the photo links, and the websites and Twitter link from the
     primary LeetCode profile. It reuses the same cache entries.
     leetcode_accounts, codeforces_accounts, github_accounts: the configured
     accounts, in config order, as read-only properties.

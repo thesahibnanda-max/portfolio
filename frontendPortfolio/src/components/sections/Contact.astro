@@ -8,9 +8,10 @@ interface Props {
   readonly name: string;
   readonly professional: Professional;
   readonly linkedinUrl: string | null;
+  readonly resumeUrl: string;
 }
 
-const { email, name, professional, linkedinUrl } = Astro.props;
+const { email, name, professional, linkedinUrl, resumeUrl } = Astro.props;
 const primaryGithub = professional.github_links[0];
 const COLUMNS_LG = 4;
 const COLUMNS_SM = 2;
@@ -27,7 +28,7 @@ const links = [
     url,
     note: hostname(url).split(".")[0] ?? hostname(url),
   })),
-  { label: "Résumé", url: professional.resume_link, note: "PDF" },
+  { label: "Résumé", url: resumeUrl, note: "PDF" },
 ];
 const year = new Date().getUTCFullYear();
 

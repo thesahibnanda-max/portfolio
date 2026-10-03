@@ -34,7 +34,6 @@ from tests.main.package.service.data.fakes import (
 )
 from tests.support import ConcurrentRunner, RecordingTransport, ResponseSpec
 
-RESUME = "https://storage.test/resume.pdf"
 PHOTOS = ("https://storage.test/1.png", "https://storage.test/2.png")
 
 
@@ -77,7 +76,6 @@ def _settings(upstream: Upstream, factory: TTLKeyValueStoreFactory, **overrides:
         "leetcode_accounts": LEETCODE_ACCOUNTS,
         "codeforces_accounts": CODEFORCES_ACCOUNTS,
         "github_accounts": GITHUB_ACCOUNTS,
-        "resume_link": RESUME,
         "profile_photo_links": PHOTOS,
         "leetcode_profile_url_format": "{base_url}/u/{username}/",
         "codeforces_profile_url_format": "{base_url}/profile/{username}",
@@ -176,7 +174,6 @@ def test_professional_details(factory: RecordingFactory) -> None:
         leetcode_links=("https://leetcode.com/u/imsahibnanda/",),
         codeforces_links=("https://codeforces.com/profile/shisukenohara",),
         github_links=("https://github.com/thesahibnanda-max", "https://github.com/thesahibnanda"),
-        resume_link=RESUME,
         profile_photo_links=PHOTOS,
         websites=("https://sahib.dev",),
         twitter_url="https://x.com/thesahibnanda",
@@ -220,8 +217,6 @@ def test_one_service_is_safe_across_threads(factory: RecordingFactory) -> None:
         {"leetcode_accounts": "imsahibnanda"},
         {"codeforces_accounts": ({"username": "x", "cache_ttl": 1},)},
         {"github_accounts": (GITHUB_ACCOUNTS[0], GITHUB_ACCOUNTS[0])},
-        {"resume_link": "storage/resume.pdf"},
-        {"resume_link": None},
         {"profile_photo_links": "https://x.test/1.png"},
         {"profile_photo_links": ("ftp://x.test/1.png",)},
         {"leetcode_profile_url_format": "{base_url}/u/"},
@@ -285,7 +280,6 @@ def test_builds_from_app_config(config_env: str, factory: RecordingFactory) -> N
             leetcode_accounts=[PlatformAccount(**account.model_dump()) for account in data.leetcode_accounts],
             codeforces_accounts=[PlatformAccount(**account.model_dump()) for account in data.codeforces_accounts],
             github_accounts=[PlatformAccount(**account.model_dump()) for account in data.github_accounts],
-            resume_link=data.resume_link,
             profile_photo_links=data.profile_photo_links,
             leetcode_profile_url_format=data.leetcode_profile_url_format,
             codeforces_profile_url_format=data.codeforces_profile_url_format,

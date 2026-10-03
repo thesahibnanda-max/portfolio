@@ -127,7 +127,6 @@ class ServiceContainer:
             leetcode_accounts=[PlatformAccount(**account.model_dump()) for account in settings.leetcode_accounts],
             codeforces_accounts=[PlatformAccount(**account.model_dump()) for account in settings.codeforces_accounts],
             github_accounts=[PlatformAccount(**account.model_dump()) for account in settings.github_accounts],
-            resume_link=settings.resume_link,
             profile_photo_links=settings.profile_photo_links,
             leetcode_profile_url_format=settings.leetcode_profile_url_format,
             codeforces_profile_url_format=settings.codeforces_profile_url_format,
