@@ -1,5 +1,7 @@
 import copy
+import hashlib
 import json
+import tomllib
 from functools import partial, partialmethod
 from pathlib import Path
 from types import MappingProxyType
@@ -13,6 +15,7 @@ from main.package.static import (
     InvalidStaticDataError,
     Personality,
     Profile,
+    ProfileImage,
     StaticDataError,
     StaticFileNotFoundError,
     StaticLoader,
@@ -22,6 +25,8 @@ from tests.support import ConcurrentRunner
 STATIC_DIR = Path(main.package.static.__file__).parent
 PROFILE_PATH = STATIC_DIR / "profile.json"
 PERSONALITY_PATH = STATIC_DIR / "personality.json"
+IMAGE_PATH = STATIC_DIR / "pfp.jpg"
+PYPROJECT_PATH = STATIC_DIR.parents[2] / "pyproject.toml"
 PROFILE_JSON = json.loads(PROFILE_PATH.read_text())
 PERSONALITY_JSON = json.loads(PERSONALITY_PATH.read_text())
 DELETE = object()
@@ -55,9 +60,16 @@ def _write(directory: Path, name: str, content: str) -> Path:
     return path
 
 
-def _point_at(monkeypatch: pytest.MonkeyPatch, *, profile: Path = PROFILE_PATH, personality: Path = PERSONALITY_PATH) -> None:
+def _point_at(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    profile: Path = PROFILE_PATH,
+    personality: Path = PERSONALITY_PATH,
+    image: Path = IMAGE_PATH,
+) -> None:
     monkeypatch.setattr(static_module, "_PROFILE_PATH", profile)
     monkeypatch.setattr(static_module, "_PERSONALITY_PATH", personality)
+    monkeypatch.setattr(static_module, "_PROFILE_IMAGE_PATH", image)
 
 
 def _read_many(loader: StaticLoader, count: int) -> tuple[int, int]:
@@ -117,13 +129,14 @@ def test_files_are_read_once_at_construction_and_never_again(monkeypatch: pytest
     monkeypatch.setattr(Path, "read_bytes", partialmethod(counter.read))
 
     static_loader = StaticLoader()
-    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH]
+    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH]
 
     for _ in range(1000):
         static_loader.get_profile()
         static_loader.get_personality()
+        static_loader.get_profile_image()
 
-    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH]
+    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH]
 
 
 def test_editing_files_after_construction_changes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -142,6 +155,7 @@ def test_editing_files_after_construction_changes_nothing(tmp_path: Path, monkey
 def test_reads_the_files_next_to_the_module() -> None:
     assert static_module._PROFILE_PATH == PROFILE_PATH
     assert static_module._PERSONALITY_PATH == PERSONALITY_PATH
+    assert static_module._PROFILE_IMAGE_PATH == IMAGE_PATH
 
 
 def test_works_from_any_working_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -258,3 +272,60 @@ def test_end_date_accepts_present(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 @pytest.mark.parametrize("error_type", [StaticFileNotFoundError, InvalidStaticDataError])
 def test_errors_share_the_static_base(error_type: type[Exception]) -> None:
     assert issubclass(error_type, StaticDataError)
+
+
+def test_loads_the_profile_photo_with_a_content_hash_etag(loader: StaticLoader) -> None:
+    image = loader.get_profile_image()
+    content = IMAGE_PATH.read_bytes()
+
+    assert isinstance(image, ProfileImage)
+    assert image.content == content
+    assert image.media_type == "image/jpeg"
+    assert image.etag == hashlib.sha256(content).hexdigest()[:16]
+    assert loader.get_profile_image() is image
+
+
+def test_profile_photo_bytes_stay_out_of_repr(loader: StaticLoader) -> None:
+    text = repr(loader.get_profile_image())
+
+    assert "content" not in text
+    assert loader.get_profile_image().etag in text
+
+
+def test_profile_is_plain_json_data(loader: StaticLoader) -> None:
+    assert "profile_image" not in Profile.model_fields
+    assert set(loader.get_profile().model_dump(by_alias=True)) == set(PROFILE_JSON)
+
+
+def test_missing_profile_photo_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _point_at(monkeypatch, image=tmp_path / "no-photo.jpg")
+
+    with pytest.raises(StaticFileNotFoundError, match="no-photo.jpg") as error:
+        StaticLoader()
+
+    assert isinstance(error.value.__cause__, FileNotFoundError)
+
+
+@pytest.mark.parametrize("content", [b"", b"\x89PNG\r\n\x1a\n", b"not an image", b"\xff\xd8"])
+def test_non_jpeg_profile_photo_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: bytes) -> None:
+    path = tmp_path / "pfp.jpg"
+    path.write_bytes(content)
+    _point_at(monkeypatch, image=path)
+
+    with pytest.raises(InvalidStaticDataError, match="not a JPEG"):
+        StaticLoader()
+
+
+def test_profile_image_rejects_bad_fields() -> None:
+    with pytest.raises(ValidationError):
+        ProfileImage(content=b"", media_type="image/jpeg", etag="0" * 16)
+    with pytest.raises(ValidationError):
+        ProfileImage(content=b"\xff\xd8\xff", media_type="text/html", etag="0" * 16)
+    with pytest.raises(ValidationError):
+        ProfileImage(content=b"\xff\xd8\xff", media_type="image/jpeg", etag="not-hex")
+
+
+def test_package_data_ships_the_photo() -> None:
+    package_data = tomllib.loads(PYPROJECT_PATH.read_text())["tool"]["setuptools"]["package-data"]
+
+    assert "*.jpg" in package_data["main.package.static"]

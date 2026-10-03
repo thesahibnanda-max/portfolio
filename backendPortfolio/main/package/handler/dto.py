@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
 from main.package.repository import MessageRole
+from main.package.static.dto import Profile
 
 
 class _RequestModel(BaseModel):
@@ -103,3 +104,7 @@ class StreamTokenResponse(_ResponseModel):
 
 class AccountsResponse[T](_ResponseModel):
     accounts: tuple[T, ...]
+
+
+class ProfileResponse(Profile):
+    profile_image_url: str
