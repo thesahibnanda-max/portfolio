@@ -10,7 +10,7 @@ import Projects from "../components/sections/Projects.astro";
 import SignalStrip from "../components/sections/SignalStrip.astro";
 import Skills from "../components/sections/Skills.astro";
 import Nav from "../components/ui/Nav.astro";
-import { codeforces, github, leetcode, personality, professional, profile } from "../content/snapshot";
+import { codeforces, github, leetcode, personality, professional, profile, profileImageUrl } from "../content/snapshot";
 import Base from "../layouts/Base.astro";
 
 const now = new Date();
@@ -64,6 +64,7 @@ const links = [
       codeforces={codeforces.accounts[0]}
       leetcode={primaryLeetcode}
       resumeLink={professional.resume_link}
+      profileImageUrl={profileImageUrl}
     />
     <SignalStrip technologies={technologies} />
     <Experience experience={profile.experience} now={now} />

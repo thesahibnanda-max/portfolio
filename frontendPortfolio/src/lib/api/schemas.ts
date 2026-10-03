@@ -55,6 +55,7 @@ export type Education = z.infer<typeof educationSchema>;
 
 export const profileSchema = z.object({
   profile_details: z.object({ name: z.string(), email: z.email() }),
+  profile_image_url: z.string().startsWith("/"),
   projects: z.array(projectSchema),
   languages: z.array(z.string()),
   achievements: z.array(z.string()),

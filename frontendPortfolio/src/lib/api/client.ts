@@ -37,6 +37,19 @@ export class ApiClient {
     return data.data;
   }
 
+  async requestBytes(path: string, options: RequestOptions = {}): Promise<Uint8Array<ArrayBuffer>> {
+    const response = await this.send(path, options);
+    const contentType = response.headers.get("Content-Type") ?? "";
+    if (!contentType.startsWith("image/")) {
+      throw new InvalidResponseError(`Expected an image from ${path}, got "${contentType}"`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  url(path: string): string {
+    return `${this.#baseUrl}${path}`;
+  }
+
   async requestEmpty(path: string, options: RequestOptions = {}): Promise<void> {
     await this.send(path, options);
   }

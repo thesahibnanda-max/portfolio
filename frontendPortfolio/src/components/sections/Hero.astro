@@ -1,4 +1,5 @@
 ---
+import { Picture } from "astro:assets";
 import type { CodeforcesAccount, Experience, LeetcodeAccount } from "../../lib/api/schemas";
 import { codeforcesRank, formatGrouped } from "../../lib/format";
 
@@ -9,9 +10,10 @@ interface Props {
   readonly codeforces: CodeforcesAccount | undefined;
   readonly leetcode: LeetcodeAccount | undefined;
   readonly resumeLink: string;
+  readonly profileImageUrl: string;
 }
 
-const { name, current, tagline, codeforces, leetcode, resumeLink } = Astro.props;
+const { name, current, tagline, codeforces, leetcode, resumeLink, profileImageUrl } = Astro.props;
 const [firstName, ...rest] = name.split(" ");
 const lastName = rest.join(" ");
 const peak = codeforces?.max_rating ?? null;
@@ -27,6 +29,24 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
   <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-b from-transparent to-bg"></div>
 
   <div class="mx-auto w-full max-w-6xl">
+    <div class="grid items-center gap-x-12 gap-y-7 md:grid-cols-[minmax(0,1fr)_auto]">
+    <div class="hero-portrait-slot md:order-last" data-reveal>
+    <figure class="hero-portrait size-24 sm:size-28 md:size-[clamp(13rem,21vw,17.5rem)]">
+      <Picture
+        src={profileImageUrl}
+        inferSize
+        alt={name}
+        formats={["avif", "webp"]}
+        fallbackFormat="jpg"
+        widths={[112, 224, 288, 400]}
+        sizes="(min-width: 768px) 17.5rem, (min-width: 640px) 7rem, 6rem"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </figure>
+    </div>
+    <div class="min-w-0">
     <p class="eyebrow mb-8 flex items-center gap-3" data-reveal>
       <span class="relative flex size-2">
         <span class="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60"></span>
@@ -39,6 +59,8 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
       <span class="block">{firstName}</span>
       <span class="block pl-[0.6em] text-accent italic">{lastName}</span>
     </h1>
+    </div>
+    </div>
 
     <div class="mt-8 grid gap-10 md:grid-cols-12 md:items-end">
       <p class="max-w-xl text-lg leading-relaxed text-muted md:col-span-6" data-reveal style="--reveal-index: 2">

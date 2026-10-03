@@ -55,6 +55,14 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         contexts are the knowledge domains the answer drew on, for source chips.
     POST   /chats/{chat_id}/messages/stream {message}  200 text/event-stream [chat_message]
     GET    /details/professional|leetcode|codeforces|github|profile|personality  200 [details]
+        /details/profile also returns profile_image_url, the relative path
+        "/details/profile/image?v=<etag>" (the etag changes with the photo).
+    GET|HEAD /details/profile/image  200 image/jpeg, or 304 [not rate limited]
+        Serves the photo from memory with ETag and Cache-Control "public,
+        max-age=31536000, immutable"; If-None-Match with the current ETag
+        (weak or strong, or "*") answers 304. Deliberately outside every
+        rate limit: it is static bytes that browsers and proxies cache for
+        a year, so a busy visitor can never make the photo fail.
     POST   /contact {email, subject, message}  200 ContactResponse {status: "SENT", reply_to, sent_at} [contact]
         Mails the message to the owner (main.package.service.contact); no
         session needed. The email is validated (syntax and a DNS mail
@@ -146,6 +154,7 @@ from .application import ApplicationFactory
 from .container import ServiceContainer, UpstreamTransports
 from .dto import (
     AccountsResponse,
+    ProfileResponse,
     ContactRequest,
     ContactResponse,
     ApiResponse,
@@ -189,6 +198,7 @@ __all__ = [
     "CreateChatRequest",
     "RenameChatRequest",
     "SendMessageRequest",
+    "ProfileResponse",
     "ContactRequest",
     "ContactResponse",
     "ApiResponse",

@@ -6,7 +6,14 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from main.config import AppConfig
-from main.package.handler import chat_routes, contact_routes, details_routes, health_routes, session_routes
+from main.package.handler import (
+    chat_routes,
+    contact_routes,
+    details_routes,
+    health_routes,
+    profile_image_routes,
+    session_routes,
+)
 from main.package.handler.container import ServiceContainer
 from main.package.handler.error_catalog import ErrorCatalog
 from main.package.handler.exception_handler import ExceptionHandler
@@ -47,6 +54,7 @@ class ApplicationFactory:
             session_routes.router,
             chat_routes.router,
             details_routes.router,
+            profile_image_routes.router,
             contact_routes.router,
         ):
             app.include_router(router)
