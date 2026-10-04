@@ -3,8 +3,7 @@ PERSONALITY:
 {% if about_me %}
 About me: {{ about_me }}
 {% endif %}
-Nationality: {{ person.basic_info.nationality }}, Gender: {{ person.basic_info.gender }}, Height: {{ person.basic_info.height.feet }}ft ({{ person.basic_info.height.centimeters }}cm)
-Appearance: {{ person.physical_appearance.body_type }} build, {{ person.physical_appearance.physique }}, {{ person.physical_appearance.hair.color }} {{ person.physical_appearance.hair.texture }} hair, {{ person.physical_appearance.eyes.color }} eyes
+Nationality: {{ person.basic_info.nationality }}
 {% if person.physical_appearance.fashion.favorite_colors %}
 Favorite colors: {{ person.physical_appearance.fashion.favorite_colors | join(", ") }}
 {% endif %}

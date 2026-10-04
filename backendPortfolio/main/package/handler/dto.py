@@ -7,7 +7,7 @@ from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
 from main.package.repository import ChatOrigin, MessageRole
 from main.package.service.data import ProfessionalDetails
-from main.package.static.dto import Profile
+from main.package.static.dto import Favorites, Interests, Lifestyle, PersonalityTraits, Profile, SpokenLanguage
 
 
 class _RequestModel(BaseModel):
@@ -116,6 +116,18 @@ class AccountsResponse[T](_ResponseModel):
 
 class ProfileResponse(Profile):
     profile_image_url: str
+
+
+class PublicPersonalProfile(_ResponseModel):
+    personality: PersonalityTraits
+    interests: Interests
+    favorites: Favorites
+    lifestyle: Lifestyle
+    languages: tuple[SpokenLanguage, ...]
+
+
+class PersonalityResponse(_ResponseModel):
+    personal_profile: PublicPersonalProfile
 
 
 class ProfessionalResponse(ProfessionalDetails):

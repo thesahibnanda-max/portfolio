@@ -115,6 +115,15 @@ agent:
     - "(reveal|show|print|repeat) (me )?(your|the) (system )?(prompt|instructions)"
     - "\\byou are now\\b"
     - "\\b(developer|dan|jailbreak) mode\\b"
+  off_topic_patterns:
+    - "\\b(write|generate|create|make|give) (me )?(a|an|some) (python|java|javascript|sql|bash|code|script|program|function|essay|poem|story|song|joke|letter|email|cover letter)\\b"
+    - "\\b(debug|fix|refactor|explain) (this|my) (code|bug|error|program)\\b"
+    - "\\bcapital of\\b"
+    - "\\btranslate\\b"
+    - "\\bsolve (this|my|the following)\\b"
+    - "\\bhomework\\b"
+    - "\\bweather\\b"
+    - "\\brecipe\\b"
   default_contexts: [PROFILE]
   context_keywords:
     PROFILE:

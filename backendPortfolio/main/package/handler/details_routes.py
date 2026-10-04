@@ -2,12 +2,11 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends
 
-from main.package.handler.dto import AccountsResponse, ApiResponse, ProfessionalResponse, ProfileResponse
+from main.package.handler.dto import AccountsResponse, ApiResponse, PersonalityResponse, ProfessionalResponse, ProfileResponse
 from main.package.handler.json_response import PydanticJSONResponse
 from main.package.handler.static_asset_routes import PROFILE_IMAGE_PATH, RESUME_PATH, versioned_url
 from main.package.handler.request_context import RateLimitGuard, State
 from main.package.service.data import CodeforcesDetails, GitHubDetails, LeetcodeDetails
-from main.package.static.dto import Personality
 
 router = APIRouter(prefix="/details", tags=["details"], dependencies=[Depends(RateLimitGuard("details"))])
 
@@ -44,6 +43,6 @@ async def profile_details(state: State) -> PydanticJSONResponse:
     return state.responder.ok(profile)
 
 
-@router.get("/personality", status_code=HTTPStatus.OK, response_model=ApiResponse[Personality])
+@router.get("/personality", status_code=HTTPStatus.OK, response_model=ApiResponse[PersonalityResponse])
 async def personality_details(state: State) -> PydanticJSONResponse:
-    return state.responder.ok(state.container.static_loader.get_personality())
+    return state.responder.ok(PersonalityResponse.model_validate(state.container.static_loader.get_personality()))

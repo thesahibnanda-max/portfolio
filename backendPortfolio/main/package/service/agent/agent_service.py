@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
 from types import MappingProxyType
@@ -6,7 +6,7 @@ from types import MappingProxyType
 from main.package.ai.agent import Agent, MarkedAnswerStream
 from main.package.ai.common import ChatMessage, ContextType
 from main.package.ai.orchestrator import QueryScope
-from main.package.repository import ChatRepository, NewMessage
+from main.package.repository import ChatRepository, NewMessage, StoredMessage
 from main.package.service.agent.answer_cache import AnswerCache
 from main.package.service.agent.dto import AgentTurnStream, GateDecision
 from main.package.service.agent.exceptions import InvalidAgentServiceSettingError
@@ -29,6 +29,7 @@ class _Turn:
     question: str
     history: tuple[ChatMessage, ...]
     decision: GateDecision
+    earlier_answer: str | None
 
 
 class AgentService:
@@ -69,6 +70,9 @@ class AgentService:
         self._fallback_messages = self._require_fallback_messages(fallback_messages, agent)
         self._max_messages_per_chat = max_messages_per_chat
 
+    def validate(self, question: str) -> str:
+        return self._message_validator.validate(question)
+
     def stream_message(self, session_id: str, chat_id: str, question: str) -> AgentTurnStream:
         turn = self._prepare_turn(session_id, chat_id, question)
         scope = turn.decision.scope
@@ -80,7 +84,9 @@ class AgentService:
                 replies=ChatReplyStream(complete=complete, fallback_answer=self._fallback_messages[scope]),
             )
 
-        cached = None if turn.history else self._answer_cache.get(turn.question)
+        cached = turn.earlier_answer
+        if cached is None and not turn.history:
+            cached = self._answer_cache.get(turn.question)
         if cached is not None:
             complete = partial(self._complete_turn, turn, QueryScope.IN_SCOPE)
             return AgentTurnStream(steps=(_RECALL_STEP,), replies=ChatReplyStream(complete=complete, fallback_answer=cached))
@@ -116,7 +122,17 @@ class AgentService:
             question=text,
             history=self._history_window.select(chat.messages),
             decision=self._scope_gate.check(text),
+            earlier_answer=self._earlier_answer(chat.messages, text),
         )
+
+    @staticmethod
+    def _earlier_answer(messages: Sequence[StoredMessage], question: str) -> str | None:
+        wanted = AnswerCache.key(question)
+        answer = None
+        for asked, replied in zip(messages, messages[1:]):
+            if asked.role == "user" and replied.role == "assistant" and AnswerCache.key(asked.content) == wanted:
+                answer = replied.content
+        return answer
 
     def _complete_streamed_turn(self, turn: _Turn, answer_stream: MarkedAnswerStream, answer: str) -> ChatReply:
         usage = answer_stream.usage

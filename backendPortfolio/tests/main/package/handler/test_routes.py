@@ -154,6 +154,14 @@ def test_details(client: TestClient, path: str, key: str) -> None:
     assert key in data
 
 
+def test_personality_never_exposes_private_details(client: TestClient) -> None:
+    data = _assert_envelope(client.get("/details/personality"), HTTPStatus.OK)
+
+    assert set(data["personal_profile"]) == {"personality", "interests", "favorites", "lifestyle", "languages"}
+    assert "physical_appearance" not in str(data) and "basic_info" not in str(data)
+    assert data["personal_profile"]["favorites"]["sports_icons"]["football"]
+
+
 def test_details_list_every_configured_account(harness: Harness, client: TestClient) -> None:
     data = _assert_envelope(client.get("/details/github"), HTTPStatus.OK)
 

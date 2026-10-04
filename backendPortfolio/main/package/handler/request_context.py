@@ -51,6 +51,9 @@ class RateLimitGuard:
         self._api = api
 
     async def __call__(self, request: Request) -> None:
+        self.check(request)
+
+    def check(self, request: Request) -> None:
         state = handler_state(request)
         state.container.rate_limiter.check(
             self._api,
@@ -81,8 +84,21 @@ class ChatStreamOpener:
 
 
 class AgentStreamOpener:
-    def __call__(self, chat_id: str, body: SendMessageRequest, session_id: SessionId, state: State) -> Iterator[AgentTurnStream]:
-        turn = state.container.agent_service.stream_message(session_id, chat_id, body.message)
+    def __init__(self, rate_limit_api: str) -> None:
+        self._rate_limit = RateLimitGuard(rate_limit_api)
+
+    def __call__(
+        self,
+        request: Request,
+        chat_id: str,
+        body: SendMessageRequest,
+        session_id: SessionId,
+        state: State,
+    ) -> Iterator[AgentTurnStream]:
+        service = state.container.agent_service
+        service.validate(body.message)
+        self._rate_limit.check(request)
+        turn = service.stream_message(session_id, chat_id, body.message)
         with turn.replies:
             try:
                 yield turn

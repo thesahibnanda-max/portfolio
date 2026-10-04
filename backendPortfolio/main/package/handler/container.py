@@ -218,6 +218,7 @@ class ServiceContainer:
             ),
             scope_gate=ScopeGate(
                 injection_patterns=settings.injection_patterns,
+                off_topic_patterns=settings.off_topic_patterns,
                 context_keywords=settings.context_keywords,
                 default_contexts=settings.default_contexts,
             ),

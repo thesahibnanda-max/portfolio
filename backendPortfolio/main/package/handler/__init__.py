@@ -63,7 +63,12 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         "step" events {label} (for example "Reading profile · github",
         "Recalling a saved answer"), then the same token, done and error
         events as the chat stream. A used-up daily token budget answers 503
-        AGENT_BUDGET_EXHAUSTED before the stream starts.
+        AGENT_BUDGET_EXHAUSTED before the stream starts. Its rate limit is
+        checked by AgentStreamOpener only after the question passed
+        validation, so a rejected (400) question never uses up the limit.
+        /details/personality returns PersonalityResponse, which leaves out
+        basic_info and physical_appearance: private details never leave the
+        server.
     GET    /details/professional|leetcode|codeforces|github|profile|personality  200 [details]
         /details/profile also returns profile_image_url, the relative path
         "/details/profile/image?v=<etag>" (the etag changes with the photo).
@@ -72,8 +77,11 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         etag changes with the résumé).
     GET|HEAD /details/profile/image  200 image/jpeg, or 304 [not rate limited]
     GET|HEAD /details/resume         200 application/pdf, or 304 [not rate limited]
-        Both serve a StaticAsset from memory with ETag and Cache-Control
-        "public, max-age=31536000, immutable"; If-None-Match with the
+        Both serve a StaticAsset from memory with an ETag. Cache-Control is
+        "public, max-age=31536000, immutable" only when ?v= equals the
+        current ETag (the versioned URLs the API hands out); any other URL
+        gets "no-cache", so a replaced file is never stuck in a browser
+        cache. If-None-Match with the
         current ETag (weak or strong, or "*") answers 304. The résumé also
         sends Content-Disposition: inline; filename="<Name>_Resume.pdf",
         built from the profile name, so it opens in the browser and saves
@@ -118,7 +126,8 @@ Errors (ErrorCatalog.default(), first match along the exception's MRO):
     409 CHAT_FULL: ChatFullError.
     413 CONTENT_TOO_LARGE: a body over config.app.max_body_bytes, declared by
         Content-Length or counted while a chunked body streams in.
-    429 RATE_LIMITED: RateLimitExceededError, with Retry-After.
+    429 RATE_LIMITED: RateLimitExceededError, with Retry-After and a generic
+    public message (internal api and scope names stay in the logs).
     502 UPSTREAM_ERROR: GroqClientError, DataSourceUnavailableError,
         DataSourceResponseError, OrchestratorResponseError, WorkerResponseError.
     503 UPSTREAM_BUSY: GroqRateLimitError.

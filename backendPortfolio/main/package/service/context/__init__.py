@@ -20,7 +20,9 @@ Providers:
         country, LinkedIn, Twitter and websites, plus every platform's
         usernames from DataService.
         PERSONALITY (personality.md): the personality JSON plus the LeetCode
-        "about me" text.
+        "about me" text. Private details (gender, height and physical
+        appearance) are deliberately left out, so the AI cannot reveal them;
+        only the nationality and favourite colours are kept.
         GITHUB (github.md): per account, repo, follower and following counts,
         bio, and the top max_repositories repositories by stars.
         LEETCODE (leetcode.md): per account, rank, problems solved by

@@ -343,6 +343,7 @@ class AgentConfig(_FrozenConfig):
     daily_token_budget: Annotated[int, Field(strict=True, ge=1)]
     markers: Annotated[dict[QueryScope, NonEmptyStr], Field(min_length=1), AfterValidator(_require_agent_markers)]
     injection_patterns: tuple[Annotated[str, Field(min_length=1), AfterValidator(_require_regex)], ...]
+    off_topic_patterns: tuple[Annotated[str, Field(min_length=1), AfterValidator(_require_regex)], ...]
     default_contexts: Annotated[tuple[ContextType, ...], Field(min_length=1), AfterValidator(_require_real_contexts)]
     context_keywords: Annotated[
         dict[ContextType, Annotated[tuple[Annotated[str, AfterValidator(_require_non_blank)], ...], Field(min_length=1)]],

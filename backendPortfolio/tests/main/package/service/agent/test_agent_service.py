@@ -57,6 +57,7 @@ class Harness:
             "agent": agent(self.transport),
             "scope_gate": ScopeGate(
                 injection_patterns=(r"ignore previous instructions",),
+                off_topic_patterns=(r"\bcapital of\b",),
                 context_keywords=KEYWORDS,
                 default_contexts=(ContextType.PROFILE,),
             ),
@@ -162,7 +163,7 @@ def test_follow_up_questions_use_history_and_skip_the_cache(harness: Harness) ->
 
 def test_marker_answer_becomes_the_fallback_and_is_not_cached(harness: Harness) -> None:
     harness.transport = streaming("⟂OOS")
-    _, events, chat_id = harness.turn("Capital of France?")
+    _, events, chat_id = harness.turn("Tallest mountain on Earth?")
 
     reply = _reply(events)
     assert (reply.answer, reply.scope, reply.required_contexts) == (
@@ -171,8 +172,42 @@ def test_marker_answer_becomes_the_fallback_and_is_not_cached(harness: Harness) 
         (),
     )
     assert harness.stored(chat_id)[-1] == ("assistant", FALLBACKS[QueryScope.NOT_RELATED_TO_PORTFOLIO])
-    assert harness.store.get(AnswerCache.key("Capital of France?")) is None
+    assert harness.store.get(AnswerCache.key("Tallest mountain on Earth?")) is None
     assert harness.budget.used == 0
+
+
+def test_off_topic_pattern_is_refused_without_any_call(harness: Harness) -> None:
+    turn, events, _ = harness.turn("What is the capital of France?")
+
+    assert turn.steps == ("Checking the question",)
+    assert _reply(events).scope is QueryScope.NOT_RELATED_TO_PORTFOLIO
+    assert harness.transport.requests == []
+
+
+def test_repeating_a_question_in_the_same_chat_reuses_its_answer(harness: Harness) -> None:
+    chat_id = harness.new_chat()
+    harness.repository.add_messages(
+        harness.session.session_id,
+        chat_id,
+        [
+            NewMessage(role="user", content="Who is he?"),
+            NewMessage(role="assistant", content="An earlier answer."),
+            NewMessage(role="user", content="And his stack?"),
+            NewMessage(role="assistant", content="Go."),
+        ],
+    )
+
+    turn, events, _ = harness.turn("  WHO is he ", chat_id)
+
+    assert turn.steps == ("Recalling a saved answer",)
+    assert _reply(events).answer == "An earlier answer."
+    assert harness.transport.requests == []
+
+
+def test_validate_trims_and_checks_the_question(harness: Harness) -> None:
+    assert harness.service().validate("  Who?  ") == "Who?"
+    with pytest.raises(ChatMessageTooLongError):
+        harness.service().validate("x" * 51)
 
 
 def test_injection_is_refused_without_any_call(harness: Harness) -> None:

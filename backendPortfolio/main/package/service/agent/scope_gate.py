@@ -13,10 +13,12 @@ class ScopeGate:
         self,
         *,
         injection_patterns: Sequence[str],
+        off_topic_patterns: Sequence[str],
         context_keywords: Mapping[ContextType, Sequence[str]],
         default_contexts: Sequence[ContextType],
     ) -> None:
-        self._injection_patterns = self._compile_patterns(injection_patterns)
+        self._injection_patterns = self._compile_patterns("injection_patterns", injection_patterns)
+        self._off_topic_patterns = self._compile_patterns("off_topic_patterns", off_topic_patterns)
         self._context_keywords = self._compile_keywords(context_keywords)
         self._default_contexts = self._require_contexts("default_contexts", default_contexts)
 
@@ -24,19 +26,22 @@ class ScopeGate:
         if any(pattern.search(question) for pattern in self._injection_patterns):
             return GateDecision(scope=QueryScope.PROMPT_INJECTION, contexts=())
 
+        if any(pattern.search(question) for pattern in self._off_topic_patterns):
+            return GateDecision(scope=QueryScope.NOT_RELATED_TO_PORTFOLIO, contexts=())
+
         matched = {context for context, pattern in self._context_keywords.items() if pattern.search(question)}
         contexts = tuple(context for context in ContextType if context in matched) or self._default_contexts
         return GateDecision(scope=QueryScope.IN_SCOPE, contexts=contexts)
 
     @staticmethod
-    def _compile_patterns(patterns: Sequence[str]) -> tuple[re.Pattern[str], ...]:
+    def _compile_patterns(name: str, patterns: Sequence[str]) -> tuple[re.Pattern[str], ...]:
         if isinstance(patterns, str) or not isinstance(patterns, Sequence):
-            raise InvalidAgentServiceSettingError("injection_patterns must be a sequence of regular expressions")
+            raise InvalidAgentServiceSettingError(f"{name} must be a sequence of regular expressions")
 
         try:
             return tuple(re.compile(pattern, re.IGNORECASE) for pattern in patterns)
         except (re.error, TypeError) as error:
-            raise InvalidAgentServiceSettingError(f"invalid injection pattern: {error}") from error
+            raise InvalidAgentServiceSettingError(f"invalid pattern in {name}: {error}") from error
 
     @classmethod
     def _compile_keywords(cls, keywords: Mapping[ContextType, Sequence[str]]) -> Mapping[ContextType, re.Pattern[str]]:

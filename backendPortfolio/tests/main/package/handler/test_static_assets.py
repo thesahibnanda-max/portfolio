@@ -48,16 +48,28 @@ def test_professional_details_link_to_the_versioned_resume(config_env: str, tmp_
     assert "supabase" not in str(professional["resume_link"])
 
 
-@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS)
-def test_asset_is_served_with_long_lived_caching(config_env: str, tmp_path: Path, path: str, content: bytes, media_type: str) -> None:
+@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS, ids=["photo", "resume"])
+def test_versioned_asset_is_cached_for_a_year(config_env: str, tmp_path: Path, path: str, content: bytes, media_type: str) -> None:
     with _client(tmp_path) as client:
-        response = client.get(f"{path}?v=anything")
+        etag = client.get(path).headers["etag"].strip('"')
+        response = client.get(f"{path}?v={etag}")
 
     assert response.status_code == HTTPStatus.OK
     assert response.content == content
     assert response.headers["content-type"] == media_type
     assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
-    assert response.headers["etag"].startswith('"') and response.headers["etag"].endswith('"')
+    assert response.headers["etag"] == f'"{etag}"'
+
+
+@pytest.mark.parametrize("query", ["", "?v=stale0000000000", "?other=1"], ids=["none", "stale", "other"])
+@pytest.mark.parametrize("path", ASSET_PATHS, ids=["photo", "resume"])
+def test_unversioned_asset_must_revalidate(config_env: str, tmp_path: Path, path: str, query: str) -> None:
+    with _client(tmp_path) as client:
+        response = client.get(f"{path}{query}")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["cache-control"] == "no-cache"
+    assert response.headers["etag"].startswith('"')
 
 
 def test_resume_opens_inline_with_a_readable_filename(config_env: str, tmp_path: Path) -> None:
@@ -84,7 +96,7 @@ def test_resume_filename_is_header_safe(name: str, filename: str) -> None:
     assert resume_filename(_profile_named(name)) == filename
 
 
-@pytest.mark.parametrize("path", ASSET_PATHS)
+@pytest.mark.parametrize("path", ASSET_PATHS, ids=["photo", "resume"])
 @pytest.mark.parametrize("header", ["{etag}", "W/{etag}", '"other", {etag}', "*"])
 def test_matching_if_none_match_is_304(config_env: str, tmp_path: Path, path: str, header: str) -> None:
     with _client(tmp_path) as client:
@@ -96,7 +108,7 @@ def test_matching_if_none_match_is_304(config_env: str, tmp_path: Path, path: st
     assert response.headers["etag"] == etag
 
 
-@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS)
+@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS, ids=["photo", "resume"])
 def test_stale_if_none_match_gets_the_asset(config_env: str, tmp_path: Path, path: str, content: bytes, media_type: str) -> None:
     with _client(tmp_path) as client:
         response = client.get(path, headers={"If-None-Match": '"0000000000000000"'})
@@ -104,7 +116,7 @@ def test_stale_if_none_match_gets_the_asset(config_env: str, tmp_path: Path, pat
     assert (response.status_code, response.content) == (HTTPStatus.OK, content)
 
 
-@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS)
+@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS, ids=["photo", "resume"])
 def test_head_returns_headers_only(config_env: str, tmp_path: Path, path: str, content: bytes, media_type: str) -> None:
     with _client(tmp_path) as client:
         response = client.head(path)
@@ -114,7 +126,7 @@ def test_head_returns_headers_only(config_env: str, tmp_path: Path, path: str, c
     assert response.content == b""
 
 
-@pytest.mark.parametrize("path", ASSET_PATHS)
+@pytest.mark.parametrize("path", ASSET_PATHS, ids=["photo", "resume"])
 def test_assets_are_never_rate_limited(config_env: str, tmp_path: Path, path: str) -> None:
     config = rate_limited(rate_limited(AppConfig.load(), "details", 2, RateLimitScope.IP), "details", 2, RateLimitScope.GLOBAL)
     with _client(tmp_path, config) as client:
@@ -125,7 +137,7 @@ def test_assets_are_never_rate_limited(config_env: str, tmp_path: Path, path: st
     assert assets == {HTTPStatus.OK}
 
 
-@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS)
+@pytest.mark.parametrize(("path", "content", "media_type"), ASSETS, ids=["photo", "resume"])
 def test_openapi_documents_the_media_type(config_env: str, tmp_path: Path, path: str, content: bytes, media_type: str) -> None:
     with _client(tmp_path) as client:
         operations = client.get("/openapi.json").json()["paths"][path]

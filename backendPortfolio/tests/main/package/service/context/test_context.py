@@ -96,8 +96,9 @@ def test_personality_context(service: DataService) -> None:
 
     assert lines[0] == "PERSONALITY:"
     assert lines[1] == "About me: Backend engineer"
-    assert lines[2] == "Nationality: Indian, Gender: Male, Height: 6ft (183cm)"
-    assert lines[3].startswith("Appearance: Athletic build, Masculine, Black Naturally wavy hair, Black eyes")
+    assert lines[2] == "Nationality: Indian"
+    assert not any(line.startswith(("Appearance:", "Gender", "Height")) for line in lines)
+    assert all(word not in "\n".join(lines) for word in ("Gender", "Height", "Athletic build", "skin"))
     assert "Sports: football (team: FC Barcelona, player: Lionel Messi); cricket (team: India, player: Virat Kohli)" in lines
     assert "Lifestyle: fitness-focused, sports enthusiast, technology enthusiast, continuous learner" in lines
     assert lines[-1].startswith("Languages: English (Professional)")

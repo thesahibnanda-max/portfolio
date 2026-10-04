@@ -159,6 +159,11 @@ Sections and fields (defaults are written in config.yaml):
         chat.fallback_messages entry, which is what the visitor sees.
         injection_patterns: valid regular expressions, matched
         case-insensitively; a match is refused with no Groq call.
+        off_topic_patterns: the same, for requests that are clearly not
+        about the owner (writing code or essays, trivia, translation); a
+        match gets the NOT_RELATED_TO_PORTFOLIO fallback with no Groq call.
+        Keep them imperative and specific so questions about the owner,
+        like "what languages does he write code in?", still pass.
         default_contexts: non-empty, never NONE; used when no keyword
         matches. Default [PROFILE].
         context_keywords: ContextType (never NONE) to non-blank keywords,

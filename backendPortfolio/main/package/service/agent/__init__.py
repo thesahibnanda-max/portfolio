@@ -14,13 +14,17 @@ Exports:
 
 How a turn spends tokens (least first):
     1. ScopeGate.check: a question matching any injection pattern is refused
-       with the PROMPT_INJECTION fallback, 0 tokens. Otherwise keywords pick
+       with the PROMPT_INJECTION fallback, and one matching an off-topic
+       pattern (for example "write me a python script", "capital of") with
+       the NOT_RELATED_TO_PORTFOLIO fallback, 0 tokens. Otherwise keywords pick
        the context sections (for example "rating" -> CODEFORCES and
        LEETCODE); with no keyword the default_contexts are used. Steps:
        ("Checking the question",).
-    2. AnswerCache: a question asked with no history whose normalized text
-       (case-folded, whitespace collapsed, trailing punctuation removed) was
-       answered within cache_ttl is replayed, 0 tokens. Steps:
+    2. Replays, 0 tokens: a question whose normalized text (case-folded,
+       whitespace collapsed, trailing punctuation removed) was already
+       asked in the same chat gets that chat's earlier answer; a question
+       asked with no history that was answered within cache_ttl comes from
+       AnswerCache. Steps:
        ("Recalling a saved answer",).
     3. TokenBudget.require_available, then one streamed Agent call with
        only the selected context, a short history window and the agent's
@@ -44,7 +48,10 @@ Construction:
     and PROMPT_INJECTION. All settings come from main.config.AppConfig.agent
     (and chat.fallback_messages). A bad setting raises
     InvalidAgentServiceSettingError.
-    ScopeGate(*, injection_patterns, context_keywords, default_contexts):
+    validate(question) -> str: the trimmed question, or the validator's
+    error; the API calls it before rate limiting.
+    ScopeGate(*, injection_patterns, off_topic_patterns, context_keywords,
+    default_contexts):
     case-insensitive regular expressions; keywords match at a word start.
     AnswerCache(*, store, ttl): store is a TTLKeyValueStore; keys are
     "agent-answer:" plus the SHA-256 of the normalized question.

@@ -507,6 +507,7 @@ def test_agent_defaults_are_cheap_and_safe(config_env: str) -> None:
     assert agent.default_contexts == (ContextType.PROFILE,)
     assert set(agent.context_keywords) == set(ContextType) - {ContextType.NONE}
     assert len(agent.injection_patterns) >= 3
+    assert len(agent.off_topic_patterns) >= 5
 
 
 @pytest.mark.parametrize(
@@ -517,6 +518,7 @@ def test_agent_defaults_are_cheap_and_safe(config_env: str) -> None:
         ('    UNSAFE: "⟂UNS"', '    UNSAFE: "⟂OOS"', "agent.markers"),
         ('    UNSAFE: "⟂UNS"', '    UNSAFE: " ⟂UNS"', "agent.markers"),
         ('    - "\\\\byou are now\\\\b"', '    - "(unclosed"', "agent.injection_patterns"),
+        ('    - "\\\\bweather\\\\b"', '    - "(weather"', "agent.off_topic_patterns"),
         ("  default_contexts: [PROFILE]", "  default_contexts: [NONE]", "agent.default_contexts"),
         ("  default_contexts: [PROFILE]", "  default_contexts: []", "agent.default_contexts"),
         ("    GITHUB:\n", "    NONE:\n", "agent.context_keywords"),

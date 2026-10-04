@@ -7,7 +7,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from main.package.handler.chat_routes import reply_events
 from main.package.handler.dto import StreamStepResponse
-from main.package.handler.request_context import AgentStreamOpener, RateLimitGuard, State
+from main.package.handler.request_context import AgentStreamOpener, State
 from main.package.service.agent import AgentTurnStream
 
 STEP_EVENT = "step"
@@ -19,10 +19,9 @@ router = APIRouter(prefix="/chats", tags=["agent"])
     "/{chat_id}/agent/stream",
     status_code=HTTPStatus.OK,
     response_class=EventSourceResponse,
-    dependencies=[Depends(RateLimitGuard("agent_message"))],
 )
 def stream_agent_message(
-    turn: Annotated[AgentTurnStream, Depends(AgentStreamOpener())],
+    turn: Annotated[AgentTurnStream, Depends(AgentStreamOpener("agent_message"))],
     state: State,
 ) -> Iterator[ServerSentEvent]:
     for step in turn.steps:

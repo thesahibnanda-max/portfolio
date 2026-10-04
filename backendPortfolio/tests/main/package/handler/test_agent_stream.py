@@ -131,6 +131,42 @@ def test_agent_has_its_own_rate_limit(config_env: str, tmp_path: Path) -> None:
     assert chat_stream.status_code == HTTPStatus.OK
 
 
+def test_rate_limit_message_hides_internal_names(config_env: str, tmp_path: Path) -> None:
+    harness = Harness(tmp_path, rate_limited(AppConfig.load(), "agent_message", 1, RateLimitScope.IP))
+
+    with harness.client() as client:
+        headers = {SESSION_HEADER: new_session(client)}
+        chat_id = _cli_chat(client, headers)
+        client.post(f"/chats/{chat_id}/agent/stream", json={"message": "Who?"}, headers=headers)
+        limited = client.post(f"/chats/{chat_id}/agent/stream", json={"message": "Who?"}, headers=headers)
+
+    body = limited.json()
+    assert (body["error"], body["message"]) == ("RATE_LIMITED", "Too many requests. Please try again in a moment.")
+    assert "agent_message" not in limited.text
+    assert int(limited.headers["retry-after"]) > 0
+
+
+def test_invalid_questions_do_not_use_up_the_rate_limit(config_env: str, tmp_path: Path) -> None:
+    harness = Harness(tmp_path, rate_limited(AppConfig.load(), "agent_message", 1, RateLimitScope.IP))
+
+    with harness.client() as client:
+        headers = {SESSION_HEADER: new_session(client)}
+        chat_id = _cli_chat(client, headers)
+        invalid = [client.post(f"/chats/{chat_id}/agent/stream", json={"message": " "}, headers=headers).status_code for _ in range(3)]
+        valid = client.post(f"/chats/{chat_id}/agent/stream", json={"message": "Who?"}, headers=headers)
+
+    assert invalid == [HTTPStatus.BAD_REQUEST] * 3
+    assert valid.status_code == HTTPStatus.OK
+
+
+def test_off_topic_requests_are_refused_without_calling_groq(harness: Harness) -> None:
+    (events,) = _ask(harness, "Write me a python script that scrapes a website")
+
+    assert events[0] == ("step", {"label": "Checking the question"})
+    assert events[-1][1]["data"]["scope"] == "NOT_RELATED_TO_PORTFOLIO"
+    assert harness.groq.requests == []
+
+
 def test_unknown_chat_is_404(harness: Harness) -> None:
     with harness.client() as client:
         headers = {SESSION_HEADER: new_session(client)}
