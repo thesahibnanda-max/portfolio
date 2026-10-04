@@ -4,7 +4,10 @@ let loading: Promise<ChatModule> | null = null;
 let mounted = false;
 
 function loadChat(): Promise<ChatModule> {
-  loading ??= import("../components/islands/chat/mount");
+  loading ??= import("../components/islands/chat/mount").catch((error: unknown) => {
+    loading = null;
+    throw error;
+  });
   return loading;
 }
 

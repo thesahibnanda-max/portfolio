@@ -49,6 +49,17 @@ const personJsonLd = JSON.stringify({
       }
     </script>
     <script type="application/ld+json" set:html={personJsonLd} />
+    {
+      import.meta.env.DEV && (
+        <script type="module" is:inline>
+          import RefreshRuntime from "/@react-refresh";
+          RefreshRuntime.injectIntoGlobalHook(window);
+          window.$RefreshReg$ = () => {};
+          window.$RefreshSig$ = () => (type) => type;
+          window.__vite_plugin_react_preamble_installed__ = true;
+        </script>
+      )
+    }
   </head>
   <body class="bg-bg text-text">
     <a

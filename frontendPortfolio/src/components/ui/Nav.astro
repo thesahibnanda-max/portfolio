@@ -10,7 +10,7 @@ const { initials, links } = Astro.props;
 <header class="fixed inset-x-0 top-0 z-50">
   <nav
     aria-label="Primary"
-    class="mx-3 mt-3 flex max-w-6xl sm:mx-auto sm:mt-4 items-center justify-between gap-4 rounded-full border border-line bg-bg/60 px-3 py-2 backdrop-blur-xl sm:px-4"
+    class="mx-3 mt-3 flex max-w-6xl items-center sm:mx-4 sm:mt-4 xl:mx-auto justify-between gap-4 rounded-full border border-line bg-bg/60 px-3 py-2 backdrop-blur-xl sm:px-4"
   >
     <a href="#top" class="flex items-center gap-2 rounded-full px-2 py-1" aria-label={`${initials}, back to top`}>
       <span class="grid size-8 place-items-center rounded-full bg-accent font-mono text-xs font-semibold text-bg">
@@ -32,6 +32,15 @@ const { initials, links } = Astro.props;
       }
     </ul>
     <div class="flex items-center gap-2">
+      <button
+        type="button"
+        data-nav-menu-open
+        aria-haspopup="dialog"
+        aria-label="Open the section menu"
+        class="grid size-8 place-items-center rounded-full border border-line text-muted transition-colors duration-200 hover:text-text md:hidden"
+      >
+        <span aria-hidden="true">☰</span>
+      </button>
       <a
         href="/cli"
         aria-label="Open the Portfolio Agent CLI"
@@ -43,12 +52,31 @@ const { initials, links } = Astro.props;
       <button
         type="button"
         data-open-chat
-        class="group flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft py-1.5 pr-1.5 pl-3 text-sm text-accent transition-all duration-300 hover:border-accent/60 hover:shadow-glow"
+        class="group flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft py-1.5 pr-3 pl-3 text-sm [@media(hover:hover)]:pr-1.5 text-accent transition-all duration-300 hover:border-accent/60 hover:shadow-glow"
       >
         <span class="size-1.5 animate-pulse rounded-full bg-accent"></span>
         Ask my AI
-        <kbd class="rounded-full border border-accent/30 px-2 py-0.5 font-mono text-[0.65rem]">⌘K</kbd>
+        <kbd class="hover-only rounded-full border border-accent/30 px-2 py-0.5 font-mono text-[0.7rem]">⌘K</kbd>
       </button>
     </div>
   </nav>
+  <dialog data-nav-menu aria-label="Sections" class="nav-sheet">
+    <nav aria-label="Sections">
+      <ul class="grid gap-1">
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href} data-nav-menu-link class="nav-sheet-link">
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a href="/cli" class="nav-sheet-link font-mono text-accent">&gt;_ Portfolio Agent CLI</a>
+        </li>
+      </ul>
+      <button type="button" data-nav-menu-close class="nav-sheet-close">Close</button>
+    </nav>
+  </dialog>
 </header>

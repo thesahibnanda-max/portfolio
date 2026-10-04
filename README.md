@@ -84,6 +84,7 @@ The site is static, so both values are read **at build time**. Astro's `astro:en
 | `npm run format` | Apply Biome fixes |
 | `npm test` | Vitest unit tests: API client, SSE stream parser, session store, chat reducer, formatting, CLI commands, autocomplete, markdown, terminal reducer |
 | `npm run test:e2e` | Playwright on desktop and mobile with a mocked API: sections, ⌘K chat streaming, 401 renewal, 429 countdown, stop, reduced motion, the `/cli` terminal |
+| `npm run test:dev` | Smoke test against `astro dev` (catches dev-only breakage, e.g. the chat island's React refresh preamble) |
 
 **Structure:**
 - `src/pages/index.astro`: the single page, composed from the build-time snapshot (`src/content/snapshot.ts`).

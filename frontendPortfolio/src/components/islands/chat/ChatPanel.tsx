@@ -9,13 +9,16 @@ const STICKY_SCROLL_PX = 80;
 
 interface ChatPanelProps {
   readonly isOpen: boolean;
+  readonly openRequest: number;
   readonly onClose: () => void;
   readonly ownerName: string;
 }
 
-export default function ChatPanel({ isOpen, onClose, ownerName }: ChatPanelProps) {
+export default function ChatPanel({ isOpen, openRequest, onClose, ownerName }: ChatPanelProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const handledRequestRef = useRef(-1);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const chat = useChat();
   const { state } = chat;
@@ -32,13 +35,35 @@ export default function ChatPanel({ isOpen, onClose, ownerName }: ChatPanelProps
     if (dialog === null) {
       return;
     }
-    if (isOpen && !dialog.open) {
+    const isNewRequest = handledRequestRef.current !== openRequest;
+    handledRequestRef.current = openRequest;
+    if (isOpen && !dialog.open && (isNewRequest || openerRef.current === null)) {
+      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       dialog.showModal();
+      dialog.querySelector<HTMLTextAreaElement>("#chat-input")?.focus();
       void chat.refreshHistory();
     } else if (!isOpen && dialog.open) {
       dialog.close();
     }
-  }, [isOpen, chat.refreshHistory]);
+    if (!isOpen && openerRef.current?.isConnected === true) {
+      openerRef.current.focus({ preventScroll: true });
+      openerRef.current = null;
+    }
+  }, [isOpen, openRequest, chat.refreshHistory]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog === null) {
+      return;
+    }
+    const onBackdropClick = (event: MouseEvent): void => {
+      if (event.target === dialog) {
+        onClose();
+      }
+    };
+    dialog.addEventListener("click", onBackdropClick);
+    return () => dialog.removeEventListener("click", onBackdropClick);
+  }, [onClose]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -65,14 +90,13 @@ export default function ChatPanel({ isOpen, onClose, ownerName }: ChatPanelProps
   return (
     <dialog
       ref={dialogRef}
-      onClose={onClose}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) {
-          onClose();
-        }
+      data-chat-dialog
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
+      onClose={() => {
+        if (isOpen && dialogRef.current?.open !== true) {
           onClose();
         }
       }}
@@ -113,7 +137,7 @@ export default function ChatPanel({ isOpen, onClose, ownerName }: ChatPanelProps
           </span>
           <span className="flex-1">
             <span className="block text-sm text-text">Portfolio Agent CLI</span>
-            <span className="block font-mono text-[0.65rem] text-faint">
+            <span className="hidden font-mono text-[0.7rem] text-faint sm:block">
               A terminal with /commands, autocomplete and the same AI
             </span>
           </span>
@@ -129,7 +153,8 @@ export default function ChatPanel({ isOpen, onClose, ownerName }: ChatPanelProps
           aria-busy={state.isStreaming}
         >
           {state.messages.length === 0 ? (
-            <div className="flex h-full flex-col justify-end gap-6 pb-4">
+            <div className="flex min-h-full flex-col gap-6 pb-4">
+              <div className="flex-1" aria-hidden="true" />
               <p className="display text-5xl leading-none">
                 Hi, I'm {ownerName}'s <em className="text-accent italic">AI.</em>
               </p>

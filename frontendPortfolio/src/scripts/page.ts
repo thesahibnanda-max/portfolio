@@ -2,6 +2,7 @@ import { startChatLauncher } from "./chatLauncher";
 import { startContactLauncher } from "./contactLauncher";
 import { startCopyButtons } from "./copy";
 import { startCountUps } from "./countUp";
+import { startNavMenu } from "./navMenu";
 import { startReveals } from "./reveal";
 import { startSmoothScroll } from "./smoothScroll";
 import { startSpotlights } from "./spotlight";
@@ -13,6 +14,7 @@ startCountUps(reducedMotion);
 startSpotlights();
 startCopyButtons();
 startChatLauncher();
+startNavMenu();
 startContactLauncher();
 startSmoothScroll(reducedMotion);
 
