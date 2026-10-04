@@ -12,3 +12,7 @@ class InvalidAgentInputError(AgentError):
 
 class AgentStreamStateError(AgentError):
     pass
+
+
+class AgentResponseError(AgentError):
+    pass

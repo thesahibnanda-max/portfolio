@@ -27,6 +27,7 @@ from main.package.service.context import (
     LeetcodeContextProvider,
     PersonalityContextProvider,
     ProfileContextProvider,
+    SiteContextProvider,
 )
 from main.package.service.data import DataService, PlatformAccount
 from main.package.static import StaticLoader
@@ -153,6 +154,7 @@ class ServiceContainer:
                 GitHubContextProvider(data_service, max_repositories=config.context.max_github_repositories),
                 LeetcodeContextProvider(data_service),
                 CodeforcesContextProvider(data_service, max_rating_changes=config.context.max_rating_changes),
+                SiteContextProvider(static_loader),
             ],
             max_workers=config.context.max_workers,
         )
@@ -214,7 +216,8 @@ class ServiceContainer:
                 selector,
                 owner_name=static_loader.get_profile().profile_details.name,
                 markers=settings.markers,
-                max_completion_tokens=settings.max_completion_tokens,
+                style_tokens=settings.styles,
+                plan_tokens=settings.plan_max_completion_tokens,
             ),
             scope_gate=ScopeGate(
                 injection_patterns=settings.injection_patterns,
@@ -228,6 +231,8 @@ class ServiceContainer:
             answer_cache=AnswerCache(store=store, ttl=settings.cache_ttl),
             token_budget=TokenBudget(daily_tokens=settings.daily_token_budget),
             fallback_messages=config.chat.fallback_messages,
+            skill_names=[name for skill in static_loader.get_cli_manifest().skills for name in (skill.name, *skill.aliases)],
+            plan_fallback_message=settings.plan_fallback_message,
             max_messages_per_chat=settings.max_messages_per_chat,
         )
 

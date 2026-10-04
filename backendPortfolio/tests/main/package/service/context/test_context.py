@@ -14,6 +14,7 @@ from main.package.service.context import (
     LeetcodeContextProvider,
     PersonalityContextProvider,
     ProfileContextProvider,
+    SiteContextProvider,
 )
 from main.package.service.data import DataService, DataSourceUnavailableError
 from main.package.static import StaticLoader
@@ -235,7 +236,7 @@ def test_aggregate_only_fetches_what_is_requested(service: DataService, upstream
 def test_aggregate_skips_blank_blocks() -> None:
     providers = [StaticProvider(context, "" if context is ContextType.GITHUB else context.name) for context in REAL_TYPES]
     with ContextAggregator(providers=providers, max_workers=2) as context:
-        assert context.aggregate(REAL_TYPES) == "PROFILE\n\nLEETCODE\n\nCODEFORCES\n\nPERSONALITY"
+        assert context.aggregate(REAL_TYPES) == "PROFILE\n\nLEETCODE\n\nCODEFORCES\n\nPERSONALITY\n\nSITE"
 
 
 def test_aggregate_renders_in_parallel() -> None:
@@ -283,3 +284,28 @@ def test_aggregator_max_workers_must_be_positive(max_workers: object) -> None:
 
 def test_errors_share_the_base() -> None:
     assert issubclass(InvalidContextSettingError, ContextError)
+
+
+def test_site_context_describes_every_skill_plugin_and_setting() -> None:
+    loader = StaticLoader()
+    provider = SiteContextProvider(loader)
+    manifest = loader.get_cli_manifest()
+    text = provider.render()
+
+    assert provider.context_type is ContextType.SITE
+    assert text.startswith("SITE:")
+    assert f"It has {len(manifest.skills)} skills in {len(manifest.plugins)} plugins" in text
+    assert '"skills" means its slash commands' in text
+    for skill in manifest.skills:
+        assert skill.usage in text
+    for setting in manifest.settings:
+        assert f"- {setting.key} ({setting.label})" in text
+    assert 'Plugin "stats" (on by default, 1 skill)' in text
+    assert 'Plugin "core" (always on' in text and 'Plugin "extras" (off by default' in text
+    assert "(aliases: /exit, /quit, /home, /back, /q)" in text
+    assert provider.render() is text
+
+
+def test_site_context_needs_a_static_loader() -> None:
+    with pytest.raises(InvalidContextSettingError):
+        SiteContextProvider("loader")

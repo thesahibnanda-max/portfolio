@@ -7,7 +7,8 @@ from fastapi import Depends, Header
 from starlette.requests import Request
 
 from main.package.handler.container import ServiceContainer
-from main.package.handler.dto import SendMessageRequest
+from main.package.ai.agent import AgentMode, AnswerStyle
+from main.package.handler.dto import AgentMessageRequest, SendMessageRequest
 from main.package.handler.exception_handler import ExceptionHandler
 from main.package.handler.responder import Responder
 from main.package.service.agent import AgentTurnStream
@@ -91,14 +92,20 @@ class AgentStreamOpener:
         self,
         request: Request,
         chat_id: str,
-        body: SendMessageRequest,
+        body: AgentMessageRequest,
         session_id: SessionId,
         state: State,
     ) -> Iterator[AgentTurnStream]:
         service = state.container.agent_service
         service.validate(body.message)
         self._rate_limit.check(request)
-        turn = service.stream_message(session_id, chat_id, body.message)
+        turn = service.stream_message(
+            session_id,
+            chat_id,
+            body.message,
+            style=AnswerStyle(body.style),
+            mode=AgentMode(body.mode),
+        )
         with turn.replies:
             try:
                 yield turn

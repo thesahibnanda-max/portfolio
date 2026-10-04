@@ -2,7 +2,14 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends
 
-from main.package.handler.dto import AccountsResponse, ApiResponse, PersonalityResponse, ProfessionalResponse, ProfileResponse
+from main.package.handler.dto import (
+    AccountsResponse,
+    ApiResponse,
+    CliManifestResponse,
+    PersonalityResponse,
+    ProfessionalResponse,
+    ProfileResponse,
+)
 from main.package.handler.json_response import PydanticJSONResponse
 from main.package.handler.static_asset_routes import PROFILE_IMAGE_PATH, RESUME_PATH, versioned_url
 from main.package.handler.request_context import RateLimitGuard, State
@@ -46,3 +53,17 @@ async def profile_details(state: State) -> PydanticJSONResponse:
 @router.get("/personality", status_code=HTTPStatus.OK, response_model=ApiResponse[PersonalityResponse])
 async def personality_details(state: State) -> PydanticJSONResponse:
     return state.responder.ok(PersonalityResponse.model_validate(state.container.static_loader.get_personality()))
+
+
+@router.get("/cli", status_code=HTTPStatus.OK, response_model=ApiResponse[CliManifestResponse])
+async def cli_manifest(state: State) -> PydanticJSONResponse:
+    loader = state.container.static_loader
+    manifest = loader.get_cli_manifest()
+    return state.responder.ok(
+        CliManifestResponse(
+            plugins=manifest.plugins,
+            skills=manifest.skills,
+            settings=manifest.settings,
+            fortunes=loader.get_fortunes(),
+        )
+    )

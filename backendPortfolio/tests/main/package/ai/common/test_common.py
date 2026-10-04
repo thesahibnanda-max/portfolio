@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from main.package.ai.common import (
+    Surface,
     AiCommonError,
     ChatMessage,
     ContextType,
@@ -56,8 +57,15 @@ def test_context_types_are_in_canonical_order() -> None:
         ContextType.LEETCODE,
         ContextType.CODEFORCES,
         ContextType.PERSONALITY,
+        ContextType.SITE,
         ContextType.NONE,
     ]
+
+
+def test_surfaces_have_readable_labels() -> None:
+    assert [surface.value for surface in Surface] == ["chat", "cli"]
+    assert Surface.CHAT.label == "chat panel on the portfolio home page"
+    assert Surface.CLI.label == "Portfolio Agent CLI terminal at /cli"
 
 
 @pytest.mark.parametrize(

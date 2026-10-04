@@ -10,6 +10,16 @@ Exports:
     start of the answer into the configured fallback message.
     AgentError and its subclasses: the errors described under Errors.
 
+Answer styles and modes:
+    AnswerStyle CONCISE or DETAILED picks the answer's token limit
+    (style_tokens) and an "Answer style" line in the user prompt, so the
+    system prompt stays identical for Groq's prompt cache.
+    AgentMode ANSWER streams an answer; PLAN makes one non-streaming call
+    with plan.md as the system prompt and a strict JSON schema (or JSON
+    object mode for models without it) and returns AgentPlan {scope,
+    summary, steps: [PlanStep {command, reason}]}. The caller validates the
+    commands; this package only parses them.
+
 Prompts (embedded in this package, the only place the prompt text lives):
     system.md: the agent's role (third person about the owner), the
     never-hallucinate rule, one marker rule per configured scope, and the
@@ -20,13 +30,18 @@ Prompts (embedded in this package, the only place the prompt text lives):
     is rendered once in the constructor and comes first in every request, so
     Groq's prompt cache can reuse it.
 
-Agent(groq_client, model_selector, *, owner_name, markers, max_completion_tokens)
+Agent(groq_client, model_selector, *, owner_name, markers, style_tokens, plan_tokens)
+    style_tokens maps every AnswerStyle to its max_completion_tokens;
+    plan_tokens caps a plan. The user prompt always starts with the CLI
+    surface line.
     markers maps a QueryScope other than IN_SCOPE to the exact text the
     model must reply with for that kind of message, for example
     NOT_RELATED_TO_PORTFOLIO -> "⟂OOS". Markers must be unique, non-empty,
     free of surrounding whitespace, and none may be a prefix of another, so
     the first characters of an answer identify at most one marker.
-    stream(message, history=(), context="") -> GroqChatCompletionStream,
+    plan(message, history=(), context="") -> (AgentPlan, GroqUsage or None);
+    AgentResponseError when the reply is empty or not a plan.
+    stream(message, history=(), context="", style=CONCISE) -> GroqChatCompletionStream,
     not yet sent; enter it with a with block. build_user_prompt and
     system_prompt expose the exact prompts for tests and logging.
     A bad setting raises InvalidAgentSettingError; a bad message, history or
@@ -58,12 +73,24 @@ Thread safety:
 """
 
 from .agent import Agent
-from .exceptions import AgentError, AgentStreamStateError, InvalidAgentInputError, InvalidAgentSettingError
+from .dto import AgentMode, AgentPlan, AnswerStyle, PlanStep
+from .exceptions import (
+    AgentError,
+    AgentResponseError,
+    AgentStreamStateError,
+    InvalidAgentInputError,
+    InvalidAgentSettingError,
+)
 from .marked_answer_stream import MarkedAnswerStream
 
 __all__ = [
     "Agent",
     "MarkedAnswerStream",
+    "AnswerStyle",
+    "AgentMode",
+    "AgentPlan",
+    "PlanStep",
+    "AgentResponseError",
     "AgentError",
     "InvalidAgentSettingError",
     "InvalidAgentInputError",

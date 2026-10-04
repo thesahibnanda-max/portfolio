@@ -38,7 +38,7 @@ namespaces = true
 
 [tool.setuptools.package-data]
 "main.config" = ["config.yaml"]
-"main.package.static" = ["*.json", "*.jpg", "*.pdf"]
+"main.package.static" = ["*.json", "*.jpg", "*.pdf", "*.md"]
 "main.package.repository" = ["*.sql"]
 "main.package.service.context" = ["templates/*.md"]
 "main.package.service.contact" = ["templates/*.md"]

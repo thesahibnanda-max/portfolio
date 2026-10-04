@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict
 
+from main.package.ai.agent import AgentPlan
 from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
 from main.package.service.chat import ChatReplyStream
@@ -18,3 +19,4 @@ class GateDecision(BaseModel):
 class AgentTurnStream:
     steps: tuple[str, ...]
     replies: ChatReplyStream
+    plan: AgentPlan | None = None

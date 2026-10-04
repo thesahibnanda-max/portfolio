@@ -12,25 +12,34 @@ def _cache(factory: TTLKeyValueStoreFactory, ttl: timedelta = timedelta(hours=6)
 
 def test_equivalent_questions_share_one_entry(ttl_factory: TTLKeyValueStoreFactory) -> None:
     cache = _cache(ttl_factory)
-    cache.put("What does Sahib do?", "Backend engineering.")
+    cache.put("What does Sahib do?", "concise", "Backend engineering.")
 
     for question in ["what does sahib do", "  WHAT   does Sahib\tdo?!  ", "What does Sahib do."]:
-        assert cache.get(question) == "Backend engineering."
-    assert cache.get("What does Sahib build?") is None
+        assert cache.get(question, "concise") == "Backend engineering."
+    assert cache.get("What does Sahib build?", "concise") is None
+
+
+def test_variants_are_cached_separately(ttl_factory: TTLKeyValueStoreFactory) -> None:
+    cache = _cache(ttl_factory)
+    cache.put("Who?", "concise", "Short.")
+    cache.put("Who?", "detailed", "Long.")
+
+    assert (cache.get("Who?", "concise"), cache.get("Who?", "detailed"), cache.get("Who?", "plan")) == ("Short.", "Long.", None)
 
 
 def test_keys_are_hashed_and_prefixed() -> None:
-    key = AnswerCache.key("Hello?")
+    key = AnswerCache.key("Hello?", "plan")
 
-    assert key.startswith("agent-answer:") and len(key) == len("agent-answer:") + 64
+    assert key.startswith("agent-answer:plan:") and len(key) == len("agent-answer:plan:") + 64
     assert "hello" not in key
+    assert AnswerCache.normalize("  Hello   THERE?! ") == "hello there"
 
 
 def test_entries_expire(ttl_factory: TTLKeyValueStoreFactory) -> None:
     cache = _cache(ttl_factory, ttl=timedelta(microseconds=1))
-    cache.put("Q", "A")
+    cache.put("Q", "concise", "A")
 
-    assert cache.get("Q") is None
+    assert cache.get("Q", "concise") is None
 
 
 @pytest.mark.parametrize(("store", "ttl"), [("store", timedelta(hours=1)), (None, timedelta(0)), (None, 3600)])

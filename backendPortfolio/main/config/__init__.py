@@ -145,7 +145,10 @@ Sections and fields (defaults are written in config.yaml):
         reasoning_effort "low".
         temperature (0 to 2) and top_p (0 to 1): fixed sampling. Defaults
         0.6 and 1.0.
-        max_completion_tokens: answer cap. Default 600.
+        styles: max_completion_tokens per answer style, exactly concise and
+        detailed. Defaults 600 and 1100.
+        plan_max_completion_tokens: cap for one plan. Default 700.
+        plan_fallback_message: shown when a plan has no valid command.
         max_question_chars: longest question after trimming. Default 500.
         max_history_messages, max_history_chars: the short history window.
         Defaults 6 and 2500.

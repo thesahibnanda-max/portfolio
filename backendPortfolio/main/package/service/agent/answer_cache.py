@@ -21,13 +21,16 @@ class AnswerCache:
         self._store = store
         self._ttl = ttl
 
-    def get(self, question: str) -> str | None:
-        return self._store.get(self.key(question))
+    def get(self, question: str, variant: str) -> str | None:
+        return self._store.get(self.key(question, variant))
 
-    def put(self, question: str, answer: str) -> None:
-        self._store.set(self.key(question), answer, datetime.now(UTC) + self._ttl)
+    def put(self, question: str, variant: str, answer: str) -> None:
+        self._store.set(self.key(question, variant), answer, datetime.now(UTC) + self._ttl)
 
     @staticmethod
-    def key(question: str) -> str:
-        normalized = _WHITESPACE.sub(" ", question.casefold()).strip().rstrip(_TRAILING_PUNCTUATION)
-        return _KEY_PREFIX + hashlib.sha256(normalized.encode()).hexdigest()
+    def normalize(question: str) -> str:
+        return _WHITESPACE.sub(" ", question.casefold()).strip().rstrip(_TRAILING_PUNCTUATION)
+
+    @classmethod
+    def key(cls, question: str, variant: str) -> str:
+        return f"{_KEY_PREFIX}{variant}:{hashlib.sha256(cls.normalize(question).encode()).hexdigest()}"

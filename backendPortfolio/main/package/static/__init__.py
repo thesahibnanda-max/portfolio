@@ -1,9 +1,12 @@
 """
-The site owner's profile, personality, profile photo and résumé, read from
-files in this package once and then served from memory.
+The site owner's profile, personality, profile photo and résumé, plus the
+Portfolio Agent CLI manifest and fortunes, read from files in this package
+once and then served from memory.
 
 Exports:
     StaticLoader: loads the files once and returns them on every call.
+    CliManifest (with CliPlugin, CliSkill, CliSetting): what the /cli
+    terminal can do.
     StaticAsset: a binary file served as-is (content, media_type, etag); used
     for the profile photo and the résumé.
     Profile, Personality and the nested DTOs they are built from.
@@ -75,6 +78,22 @@ Files and DTOs:
         is kept out of Profile so the profile stays plain JSON data; the API
         serves it from its own endpoint.
 
+    cli.json -> CliManifest, from get_cli_manifest()
+        The single source of truth for the terminal, shared by the /cli UI
+        (through GET /details/cli) and both AIs (through the SITE context).
+        plugins: name, summary, enabled_by_default, removable.
+        skills: name, aliases, usage, summary, group (Explore, AI,
+        Session), plugin, arg_source (where autocomplete finds arguments).
+        settings: key, label, summary, options (at least 2), default.
+        Plugin names, setting keys, and skill names together with aliases
+        are each unique; every skill's plugin exists; a plugin that cannot
+        be removed is enabled by default; every default is one of its
+        options. Anything else fails at startup.
+
+    fortunes.md -> tuple of str, from get_fortunes()
+        Every line starting with "- " is one fortune for /fortune; a file
+        without any raises InvalidStaticDataError.
+
     resume.pdf -> StaticAsset
         The same shape as the photo with media_type "application/pdf". The
         file must start with the PDF signature (%PDF-). Replacing the file
@@ -103,6 +122,10 @@ Example:
 
 from .dto import (
     Accessories,
+    CliManifest,
+    CliPlugin,
+    CliSetting,
+    CliSkill,
     Artist,
     BasicInfo,
     Education,
@@ -140,6 +163,10 @@ from .static import StaticLoader
 __all__ = [
     "StaticLoader",
     "StaticAsset",
+    "CliManifest",
+    "CliPlugin",
+    "CliSkill",
+    "CliSetting",
     "Profile",
     "ProfileDetails",
     "Project",

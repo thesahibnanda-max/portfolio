@@ -32,6 +32,7 @@ from main.config import (
     SmtpAccountConfig,
     TTLKeyValueStoreConfig,
 )
+from main.package.ai.agent import AnswerStyle
 from main.package.ai.common import ContextType, LLMModel, ModelSelector
 from main.package.ai.orchestrator import Orchestrator, QueryScope
 from main.package.ai.worker import Worker
@@ -499,7 +500,9 @@ def test_agent_defaults_are_cheap_and_safe(config_env: str) -> None:
     agent = AppConfig.load().agent
 
     assert (agent.model.model_id, agent.model.reasoning_effort) == ("openai/gpt-oss-20b", "low")
-    assert (agent.temperature, agent.top_p, agent.max_completion_tokens) == (0.6, 1.0, 600)
+    assert (agent.temperature, agent.top_p, agent.plan_max_completion_tokens) == (0.6, 1.0, 700)
+    assert agent.styles == {AnswerStyle.CONCISE: 600, AnswerStyle.DETAILED: 1100}
+    assert "Shift+Tab" in agent.plan_fallback_message
     assert (agent.max_question_chars, agent.max_history_messages, agent.max_history_chars) == (500, 6, 2500)
     assert agent.cache_ttl == timedelta(hours=6)
     assert agent.daily_token_budget == 400000
@@ -523,7 +526,10 @@ def test_agent_defaults_are_cheap_and_safe(config_env: str) -> None:
         ("  default_contexts: [PROFILE]", "  default_contexts: []", "agent.default_contexts"),
         ("    GITHUB:\n", "    NONE:\n", "agent.context_keywords"),
         ('      - "github"', '      - "   "', "agent.context_keywords"),
-        ("  max_completion_tokens: 600", "  max_completion_tokens: 0", "agent.max_completion_tokens"),
+        ("    detailed: 1100\n", "", "agent.styles"),
+        ("    concise: 600", "    concise: 0", "agent.styles"),
+        ("  plan_max_completion_tokens: 700", "  plan_max_completion_tokens: 0", "agent.plan_max_completion_tokens"),
+        ('  plan_fallback_message: "I', '  plan_fallback_message: "  "\n  unused: "I', "agent"),
         ("  max_messages_per_chat: 200\n  cache_ttl", "  max_messages_per_chat: 1\n  cache_ttl", "agent.max_messages_per_chat"),
     ],
 )

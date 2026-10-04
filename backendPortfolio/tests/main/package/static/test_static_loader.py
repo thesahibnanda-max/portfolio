@@ -12,6 +12,10 @@ from pydantic import ValidationError
 import main.package.static
 import main.package.static.static as static_module
 from main.package.static import (
+    CliManifest,
+    CliPlugin,
+    CliSetting,
+    CliSkill,
     InvalidStaticDataError,
     Personality,
     Profile,
@@ -27,6 +31,9 @@ PROFILE_PATH = STATIC_DIR / "profile.json"
 PERSONALITY_PATH = STATIC_DIR / "personality.json"
 IMAGE_PATH = STATIC_DIR / "pfp.jpg"
 RESUME_PATH = STATIC_DIR / "resume.pdf"
+CLI_PATH = STATIC_DIR / "cli.json"
+FORTUNES_PATH = STATIC_DIR / "fortunes.md"
+CLI_JSON = json.loads(CLI_PATH.read_text())
 PYPROJECT_PATH = STATIC_DIR.parents[2] / "pyproject.toml"
 PROFILE_JSON = json.loads(PROFILE_PATH.read_text())
 PERSONALITY_JSON = json.loads(PERSONALITY_PATH.read_text())
@@ -68,11 +75,15 @@ def _point_at(
     personality: Path = PERSONALITY_PATH,
     image: Path = IMAGE_PATH,
     resume: Path = RESUME_PATH,
+    cli: Path = CLI_PATH,
+    fortunes: Path = FORTUNES_PATH,
 ) -> None:
     monkeypatch.setattr(static_module, "_PROFILE_PATH", profile)
     monkeypatch.setattr(static_module, "_PERSONALITY_PATH", personality)
     monkeypatch.setattr(static_module, "_PROFILE_IMAGE_PATH", image)
     monkeypatch.setattr(static_module, "_RESUME_PATH", resume)
+    monkeypatch.setattr(static_module, "_CLI_PATH", cli)
+    monkeypatch.setattr(static_module, "_FORTUNES_PATH", fortunes)
 
 
 def _read_many(loader: StaticLoader, count: int) -> tuple[int, int]:
@@ -132,7 +143,7 @@ def test_files_are_read_once_at_construction_and_never_again(monkeypatch: pytest
     monkeypatch.setattr(Path, "read_bytes", partialmethod(counter.read))
 
     static_loader = StaticLoader()
-    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH, RESUME_PATH]
+    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH, RESUME_PATH, CLI_PATH]
 
     for _ in range(1000):
         static_loader.get_profile()
@@ -140,7 +151,7 @@ def test_files_are_read_once_at_construction_and_never_again(monkeypatch: pytest
         static_loader.get_profile_image()
         static_loader.get_resume()
 
-    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH, RESUME_PATH]
+    assert counter.paths == [PROFILE_PATH, PERSONALITY_PATH, IMAGE_PATH, RESUME_PATH, CLI_PATH]
 
 
 def test_editing_files_after_construction_changes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -367,3 +378,101 @@ def test_package_data_ships_the_photo_and_resume() -> None:
 
     assert "*.jpg" in package_data["main.package.static"]
     assert "*.pdf" in package_data["main.package.static"]
+
+
+def _cli_variant(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document: dict) -> None:
+    _point_at(monkeypatch, cli=_write(tmp_path, "cli.json", json.dumps(document)))
+
+
+def test_loads_the_cli_manifest(loader: StaticLoader) -> None:
+    manifest = loader.get_cli_manifest()
+
+    assert isinstance(manifest, CliManifest)
+    assert len(manifest.skills) == len(CLI_JSON["skills"])
+    assert {plugin.name for plugin in manifest.plugins} == {"core", "portfolio", "stats", "agent", "extras"}
+    assert all(isinstance(skill, CliSkill) for skill in manifest.skills)
+    assert all(isinstance(setting, CliSetting) for setting in manifest.settings)
+    assert all(isinstance(plugin, CliPlugin) for plugin in manifest.plugins)
+    assert [setting.key for setting in manifest.settings][0] == "mode"
+    assert loader.get_cli_manifest() is manifest
+
+
+def test_loads_the_fortunes(loader: StaticLoader) -> None:
+    fortunes = loader.get_fortunes()
+
+    assert len(fortunes) >= 5
+    assert all(fortune and not fortune.startswith("-") for fortune in fortunes)
+
+
+def _duplicate_alias(document: dict) -> dict:
+    result = copy.deepcopy(document)
+    result["skills"][1]["aliases"] = ["help"]
+    return result
+
+
+def _unknown_plugin(document: dict) -> dict:
+    result = copy.deepcopy(document)
+    result["skills"][0]["plugin"] = "ghost"
+    return result
+
+
+def _duplicate_plugin(document: dict) -> dict:
+    result = copy.deepcopy(document)
+    result["plugins"].append(result["plugins"][0])
+    return result
+
+
+def _locked_but_disabled(document: dict) -> dict:
+    result = copy.deepcopy(document)
+    result["plugins"][0]["enabledByDefault"] = False
+    return result
+
+
+def _duplicate_setting(document: dict) -> dict:
+    result = copy.deepcopy(document)
+    result["settings"].append(result["settings"][0])
+    return result
+
+
+def _bad_default(document: dict) -> dict:
+    result = copy.deepcopy(document)
+    result["settings"][0]["default"] = "turbo"
+    return result
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (_duplicate_alias, "skill names and aliases must be unique"),
+        (_unknown_plugin, "unknown plugins"),
+        (_duplicate_plugin, "plugin names must be unique"),
+        (_locked_but_disabled, "cannot be removed"),
+        (_duplicate_setting, "setting keys must be unique"),
+        (_bad_default, "default must be one of its options"),
+    ],
+)
+def test_inconsistent_cli_manifest_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutate, message: str) -> None:
+    _cli_variant(tmp_path, monkeypatch, mutate(CLI_JSON))
+
+    with pytest.raises(InvalidStaticDataError, match=message):
+        StaticLoader()
+
+
+def test_missing_fortunes_raise(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _point_at(monkeypatch, fortunes=tmp_path / "none.md")
+
+    with pytest.raises(StaticFileNotFoundError, match="none.md"):
+        StaticLoader()
+
+
+def test_fortunes_need_bullet_lines(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _point_at(monkeypatch, fortunes=_write(tmp_path, "fortunes.md", "# Fortunes\n- \njust text\n"))
+
+    with pytest.raises(InvalidStaticDataError, match="no '- ' fortune lines"):
+        StaticLoader()
+
+
+def test_package_data_ships_the_fortunes() -> None:
+    package_data = tomllib.loads(PYPROJECT_PATH.read_text())["tool"]["setuptools"]["package-data"]
+
+    assert "*.md" in package_data["main.package.static"]

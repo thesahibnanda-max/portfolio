@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Annotated
+from typing import Annotated, Literal, Self
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PlainSerializer
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PlainSerializer, model_validator
 from pydantic.alias_generators import to_camel
 
 YearMonth = Annotated[str, Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")]
@@ -206,3 +206,64 @@ class StaticAsset(BaseModel):
     content: Annotated[bytes, Field(min_length=1, repr=False)]
     media_type: Annotated[str, Field(pattern=r"^(image|application)/[a-z0-9.+-]+$")]
     etag: Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
+
+
+CliName = Annotated[str, Field(pattern=r"^[a-z?][a-zé-]*$")]
+CliText = Annotated[str, Field(min_length=1)]
+
+
+class CliPlugin(_StaticModel):
+    name: CliName
+    summary: CliText
+    enabled_by_default: bool
+    removable: bool
+
+
+class CliSkill(_StaticModel):
+    name: CliName
+    aliases: tuple[CliName, ...]
+    usage: CliText
+    summary: CliText
+    group: Literal["Explore", "AI", "Session"]
+    plugin: CliName
+    arg_source: Literal["none", "companies", "projects", "skillAreas", "platforms", "mail", "settings", "plugins"]
+
+
+class CliSetting(_StaticModel):
+    key: Annotated[str, Field(pattern=r"^[a-zA-Z]+$")]
+    label: CliText
+    summary: CliText
+    options: Annotated[tuple[CliText, ...], Field(min_length=2)]
+    default: CliText
+
+
+class CliManifest(_StaticModel):
+    plugins: Annotated[tuple[CliPlugin, ...], Field(min_length=1)]
+    skills: Annotated[tuple[CliSkill, ...], Field(min_length=1)]
+    settings: tuple[CliSetting, ...]
+
+    @model_validator(mode="after")
+    def _require_consistency(self) -> Self:
+        plugin_names = [plugin.name for plugin in self.plugins]
+        if len(set(plugin_names)) != len(plugin_names):
+            raise ValueError("plugin names must be unique")
+
+        names = [name for skill in self.skills for name in (skill.name, *skill.aliases)]
+        if len(set(names)) != len(names):
+            raise ValueError("skill names and aliases must be unique")
+
+        unknown = sorted({skill.plugin for skill in self.skills} - set(plugin_names))
+        if unknown:
+            raise ValueError(f"skills use unknown plugins {unknown}")
+
+        if any(not plugin.removable and not plugin.enabled_by_default for plugin in self.plugins):
+            raise ValueError("a plugin that cannot be removed must be enabled by default")
+
+        keys = [setting.key for setting in self.settings]
+        if len(set(keys)) != len(keys):
+            raise ValueError("setting keys must be unique")
+
+        if any(setting.default not in setting.options for setting in self.settings):
+            raise ValueError("every setting default must be one of its options")
+
+        return self

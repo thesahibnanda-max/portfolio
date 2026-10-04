@@ -58,6 +58,9 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         contexts are the knowledge domains the answer drew on, for source chips.
     POST   /chats/{chat_id}/messages/stream {message}  200 text/event-stream [chat_message]
     POST   /chats/{chat_id}/agent/stream {message}     200 text/event-stream [agent_message]
+        Body: AgentMessageRequest {message, style: "concise"|"detailed",
+        mode: "answer"|"plan"}. In plan mode a "plan" event {summary, steps:
+        [{command, reason}]} follows the steps.
         The Portfolio Agent for the /cli terminal (main.package.service.agent):
         at most one Groq call, often none. It first sends one or more
         "step" events {label} (for example "Reading profile · github",
@@ -69,7 +72,10 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         /details/personality returns PersonalityResponse, which leaves out
         basic_info and physical_appearance: private details never leave the
         server.
-    GET    /details/professional|leetcode|codeforces|github|profile|personality  200 [details]
+    GET    /details/professional|leetcode|codeforces|github|profile|personality|cli  200 [details]
+        /details/cli returns CliManifestResponse {plugins, skills, settings,
+        fortunes}: the terminal's manifest, the single source of truth the
+        /cli page renders its skills from.
         /details/profile also returns profile_image_url, the relative path
         "/details/profile/image?v=<etag>" (the etag changes with the photo).
         /details/professional returns ProfessionalResponse, whose

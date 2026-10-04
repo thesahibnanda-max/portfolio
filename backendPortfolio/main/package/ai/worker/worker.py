@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from pathlib import Path
 
-from main.package.ai.common.dto import ChatMessage
+from main.package.ai.common.dto import ChatMessage, Surface
 from main.package.ai.common.model_selector import ModelSelector
 from main.package.ai.common.prompting import build_prompt_environment, first_choice_content, require_conversation
 from main.package.ai.worker.exceptions import InvalidWorkerInputError, InvalidWorkerSettingError, WorkerResponseError
@@ -50,15 +50,30 @@ class Worker:
     def system_prompt(self) -> str:
         return self._system_prompt
 
-    def build_user_prompt(self, message: str, history: Sequence[ChatMessage] = (), context: str = "") -> str:
+    def build_user_prompt(
+        self,
+        message: str,
+        history: Sequence[ChatMessage] = (),
+        context: str = "",
+        surface: Surface = Surface.CHAT,
+    ) -> str:
         checked_history = require_conversation(message, history, InvalidWorkerInputError)
         if not isinstance(context, str):
             raise InvalidWorkerInputError("context must be a string")
 
-        return self._user_template.render(current_message=message, history=checked_history, context=context)
+        if not isinstance(surface, Surface):
+            raise InvalidWorkerInputError("surface must be a Surface")
 
-    def respond(self, message: str, history: Sequence[ChatMessage] = (), context: str = "") -> str:
-        completion = self._groq_client.create_chat_completion(self._build_request(message, history, context))
+        return self._user_template.render(current_message=message, history=checked_history, context=context, surface=surface)
+
+    def respond(
+        self,
+        message: str,
+        history: Sequence[ChatMessage] = (),
+        context: str = "",
+        surface: Surface = Surface.CHAT,
+    ) -> str:
+        completion = self._groq_client.create_chat_completion(self._build_request(message, history, context, surface))
 
         content = first_choice_content(completion)
         if content is None:
@@ -66,11 +81,23 @@ class Worker:
 
         return content
 
-    def stream(self, message: str, history: Sequence[ChatMessage] = (), context: str = "") -> GroqChatCompletionStream:
-        return self._groq_client.stream_chat_completion(self._build_request(message, history, context))
+    def stream(
+        self,
+        message: str,
+        history: Sequence[ChatMessage] = (),
+        context: str = "",
+        surface: Surface = Surface.CHAT,
+    ) -> GroqChatCompletionStream:
+        return self._groq_client.stream_chat_completion(self._build_request(message, history, context, surface))
 
-    def _build_request(self, message: str, history: Sequence[ChatMessage], context: str) -> GroqChatCompletionRequest:
-        user_prompt = self.build_user_prompt(message, history, context)
+    def _build_request(
+        self,
+        message: str,
+        history: Sequence[ChatMessage],
+        context: str,
+        surface: Surface,
+    ) -> GroqChatCompletionRequest:
+        user_prompt = self.build_user_prompt(message, history, context, surface)
         choice = self._model_selector.select()
 
         return GroqChatCompletionRequest(

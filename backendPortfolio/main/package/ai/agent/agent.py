@@ -2,16 +2,54 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from types import MappingProxyType
 
-from main.package.ai.agent.exceptions import InvalidAgentInputError, InvalidAgentSettingError
-from main.package.ai.common.dto import ChatMessage
+from main.package.ai.agent.dto import AgentPlan, AnswerStyle
+from main.package.ai.agent.exceptions import AgentResponseError, InvalidAgentInputError, InvalidAgentSettingError
+from main.package.ai.common.dto import ChatMessage, ModelChoice, Surface
 from main.package.ai.common.model_selector import ModelSelector
-from main.package.ai.common.prompting import build_prompt_environment, require_conversation
+from main.package.ai.common.prompting import build_prompt_environment, first_choice_content, require_conversation
 from main.package.ai.orchestrator import QueryScope
-from main.package.clients.groq import GroqChatCompletionRequest, GroqChatCompletionStream, GroqClient, GroqMessage
+from main.package.clients.groq import (
+    GroqChatCompletionRequest,
+    GroqChatCompletionStream,
+    GroqClient,
+    GroqJsonObjectResponseFormat,
+    GroqJsonSchema,
+    GroqJsonSchemaResponseFormat,
+    GroqMessage,
+    GroqResponseFormat,
+    GroqUsage,
+)
+from main.package.json_extract import JsonExtractor, JsonExtractorError
 
 _PROMPT_DIRECTORY = Path(__file__).parent
 _SYSTEM_TEMPLATE = "system.md"
+_PLAN_TEMPLATE = "plan.md"
 _USER_TEMPLATE = "user.md"
+_PLAN_SCHEMA_NAME = "agent_plan"
+_PLAN_SCHEMA = MappingProxyType(
+    {
+        "type": "object",
+        "properties": {
+            "scope": {"type": "string", "enum": [scope.value for scope in QueryScope]},
+            "summary": {"type": "string"},
+            "steps": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"command": {"type": "string"}, "reason": {"type": "string"}},
+                    "required": ["command", "reason"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["scope", "summary", "steps"],
+        "additionalProperties": False,
+    }
+)
+_STRICT_PLAN_FORMAT = GroqJsonSchemaResponseFormat(
+    json_schema=GroqJsonSchema(name=_PLAN_SCHEMA_NAME, schema=_PLAN_SCHEMA, strict=True)
+)
+_JSON_OBJECT_FORMAT = GroqJsonObjectResponseFormat()
 
 
 class Agent:
@@ -22,7 +60,8 @@ class Agent:
         *,
         owner_name: str,
         markers: Mapping[QueryScope, str],
-        max_completion_tokens: int,
+        style_tokens: Mapping[AnswerStyle, int],
+        plan_tokens: int,
     ) -> None:
         if not isinstance(groq_client, GroqClient):
             raise InvalidAgentSettingError("groq_client must be a GroqClient")
@@ -33,19 +72,18 @@ class Agent:
         if not isinstance(owner_name, str) or not owner_name.strip():
             raise InvalidAgentSettingError("owner_name must be a non-blank string")
 
-        if isinstance(max_completion_tokens, bool) or not isinstance(max_completion_tokens, int) or max_completion_tokens < 1:
-            raise InvalidAgentSettingError("max_completion_tokens must be a positive int")
-
         self._groq_client = groq_client
         self._model_selector = model_selector
         self._markers = self._require_markers(markers)
-        self._max_completion_tokens = max_completion_tokens
+        self._style_tokens = self._require_style_tokens(style_tokens)
+        self._plan_tokens = self._require_positive_int("plan_tokens", plan_tokens)
 
         environment = build_prompt_environment(_PROMPT_DIRECTORY)
         self._system_prompt = environment.get_template(_SYSTEM_TEMPLATE).render(
             owner_name=owner_name.strip(),
             markers=self._markers,
         )
+        self._plan_prompt = environment.get_template(_PLAN_TEMPLATE).render(owner_name=owner_name.strip())
         self._user_template = environment.get_template(_USER_TEMPLATE)
 
     @property
@@ -53,33 +91,99 @@ class Agent:
         return self._system_prompt
 
     @property
+    def plan_prompt(self) -> str:
+        return self._plan_prompt
+
+    @property
     def markers(self) -> Mapping[QueryScope, str]:
         return self._markers
 
-    def build_user_prompt(self, message: str, history: Sequence[ChatMessage] = (), context: str = "") -> str:
+    def build_user_prompt(
+        self,
+        message: str,
+        history: Sequence[ChatMessage] = (),
+        context: str = "",
+        style: AnswerStyle | None = AnswerStyle.CONCISE,
+    ) -> str:
         checked_history = require_conversation(message, history, InvalidAgentInputError)
         if not isinstance(context, str):
             raise InvalidAgentInputError("context must be a string")
 
-        return self._user_template.render(current_message=message, history=checked_history, context=context)
+        if style is not None and not isinstance(style, AnswerStyle):
+            raise InvalidAgentInputError("style must be an AnswerStyle or None")
 
-    def stream(self, message: str, history: Sequence[ChatMessage] = (), context: str = "") -> GroqChatCompletionStream:
-        user_prompt = self.build_user_prompt(message, history, context)
-        choice = self._model_selector.select()
-
-        return self._groq_client.stream_chat_completion(
-            GroqChatCompletionRequest(
-                model=choice.model_id,
-                messages=(
-                    GroqMessage(role="system", content=self._system_prompt),
-                    GroqMessage(role="user", content=user_prompt),
-                ),
-                temperature=choice.temperature,
-                top_p=choice.top_p,
-                max_completion_tokens=self._max_completion_tokens,
-                reasoning_effort=choice.reasoning_effort,
-            )
+        return self._user_template.render(
+            current_message=message,
+            history=checked_history,
+            context=context,
+            surface=Surface.CLI,
+            style="" if style is None else style.value,
         )
+
+    def stream(
+        self,
+        message: str,
+        history: Sequence[ChatMessage] = (),
+        context: str = "",
+        style: AnswerStyle = AnswerStyle.CONCISE,
+    ) -> GroqChatCompletionStream:
+        user_prompt = self.build_user_prompt(message, history, context, style)
+        choice = self._model_selector.select()
+        return self._groq_client.stream_chat_completion(
+            self._request(choice, self._system_prompt, user_prompt, self._style_tokens[style], None)
+        )
+
+    def plan(self, message: str, history: Sequence[ChatMessage] = (), context: str = "") -> tuple[AgentPlan, GroqUsage | None]:
+        user_prompt = self.build_user_prompt(message, history, context, None)
+        choice = self._model_selector.select()
+        response_format = _STRICT_PLAN_FORMAT if choice.supports_strict_json_schema else _JSON_OBJECT_FORMAT
+        completion = self._groq_client.create_chat_completion(
+            self._request(choice, self._plan_prompt, user_prompt, self._plan_tokens, response_format)
+        )
+
+        content = first_choice_content(completion)
+        if content is None:
+            raise AgentResponseError("Agent model returned no plan")
+
+        try:
+            return JsonExtractor.extract(content, AgentPlan), completion.usage
+        except JsonExtractorError as error:
+            raise AgentResponseError("Agent model did not return a valid plan") from error
+
+    @staticmethod
+    def _request(
+        choice: ModelChoice,
+        system_prompt: str,
+        user_prompt: str,
+        max_completion_tokens: int,
+        response_format: GroqResponseFormat | None,
+    ) -> GroqChatCompletionRequest:
+        return GroqChatCompletionRequest(
+            model=choice.model_id,
+            messages=(
+                GroqMessage(role="system", content=system_prompt),
+                GroqMessage(role="user", content=user_prompt),
+            ),
+            temperature=choice.temperature,
+            top_p=choice.top_p,
+            max_completion_tokens=max_completion_tokens,
+            reasoning_effort=choice.reasoning_effort,
+            response_format=response_format,
+        )
+
+    @staticmethod
+    def _require_positive_int(name: str, value: int) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise InvalidAgentSettingError(f"{name} must be a positive int")
+
+        return value
+
+    @classmethod
+    def _require_style_tokens(cls, style_tokens: Mapping[AnswerStyle, int]) -> Mapping[AnswerStyle, int]:
+        if not isinstance(style_tokens, Mapping) or set(style_tokens) != set(AnswerStyle):
+            raise InvalidAgentSettingError(f"style_tokens must map exactly {sorted(AnswerStyle)} to token limits")
+
+        return MappingProxyType({style: cls._require_positive_int(f"style_tokens[{style}]", tokens) for style, tokens in style_tokens.items()})
 
     @staticmethod
     def _require_markers(markers: Mapping[QueryScope, str]) -> Mapping[QueryScope, str]:

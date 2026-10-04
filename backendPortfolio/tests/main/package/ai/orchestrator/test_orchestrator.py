@@ -4,7 +4,7 @@ from importlib import resources
 import pytest
 from jinja2 import UndefinedError
 
-from main.package.ai.common import ChatMessage, ContextType
+from main.package.ai.common import ChatMessage, ContextType, Surface
 from main.package.ai.common.prompting import build_prompt_environment
 from main.package.ai.orchestrator import (
     InvalidOrchestratorInputError,
@@ -59,11 +59,31 @@ def test_system_prompt_names_owner_and_lists_every_domain_in_order() -> None:
 
 
 def test_user_prompt_without_history() -> None:
-    assert _orchestrator().build_user_prompt("What is his rating?") == "Current message:\nWhat is his rating?"
+    assert _orchestrator().build_user_prompt("What is his rating?") == (
+        "Surface: chat panel on the portfolio home page\n\nCurrent message:\nWhat is his rating?"
+    )
+
+
+def test_user_prompt_names_the_cli_surface_and_route_sends_it() -> None:
+    transport = answering('{"scope": "IN_SCOPE", "requiredContexts": ["SITE"], "reason": "cli"}')
+    orchestrator = _orchestrator(transport)
+
+    assert orchestrator.route("How many skills are here?", surface=Surface.CLI).required_contexts == (ContextType.SITE,)
+    assert sent_body(transport)["messages"][1]["content"].startswith("Surface: Portfolio Agent CLI terminal at /cli\n")
+    with pytest.raises(InvalidOrchestratorInputError, match="surface"):
+        orchestrator.build_user_prompt("Hi", surface="cli")
+
+
+def test_system_prompt_routes_site_questions() -> None:
+    prompt = _orchestrator().system_prompt
+
+    assert "- SITE: This portfolio website and its Portfolio Agent CLI terminal" in prompt
+    assert "select SITE rather than PROFILE" in prompt
 
 
 def test_user_prompt_with_history() -> None:
     assert _orchestrator().build_user_prompt("And GitHub?", HISTORY) == (
+        "Surface: chat panel on the portfolio home page\n\n"
         "Conversation so far:\nUSER: Who is he?\nASSISTANT: A backend engineer.\n\nCurrent message:\nAnd GitHub?"
     )
 
@@ -228,7 +248,7 @@ EXPECTED_STRICT_FORMAT = {
                 "scope": {"type": "string", "enum": ["IN_SCOPE", "NOT_RELATED_TO_PORTFOLIO", "PROMPT_INJECTION", "UNSAFE"]},
                 "requiredContexts": {
                     "type": "array",
-                    "items": {"type": "string", "enum": ["PROFILE", "GITHUB", "LEETCODE", "CODEFORCES", "PERSONALITY", "NONE"]},
+                    "items": {"type": "string", "enum": ["PROFILE", "GITHUB", "LEETCODE", "CODEFORCES", "PERSONALITY", "SITE", "NONE"]},
                 },
                 "reason": {"type": "string"},
             },

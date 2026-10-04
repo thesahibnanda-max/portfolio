@@ -23,6 +23,7 @@ from main.config.exceptions import (
     InvalidConfigError,
     MissingEnvironmentVariableError,
 )
+from main.package.ai.agent.dto import AnswerStyle
 from main.package.ai.common.dto import ContextType
 from main.package.ai.orchestrator.dto import QueryScope
 from main.package.mail.dto import SmtpSecurity
@@ -143,6 +144,13 @@ def _require_agent_markers(markers: dict[QueryScope, str]) -> dict[QueryScope, s
         raise ValueError("Markers must be unique and none may be a prefix of another")
 
     return markers
+
+
+def _require_every_style(styles: dict[AnswerStyle, int]) -> dict[AnswerStyle, int]:
+    if set(styles) != set(AnswerStyle):
+        raise ValueError(f"Styles must cover exactly {sorted(AnswerStyle)}")
+
+    return styles
 
 
 def _require_regex(value: str) -> str:
@@ -334,7 +342,9 @@ class AgentConfig(_FrozenConfig):
     model: LLMModelConfig
     temperature: Annotated[float, Field(ge=0, le=2)]
     top_p: Annotated[float, Field(ge=0, le=1)]
-    max_completion_tokens: Annotated[int, Field(strict=True, ge=1)]
+    styles: Annotated[dict[AnswerStyle, Annotated[int, Field(strict=True, ge=1)]], AfterValidator(_require_every_style)]
+    plan_max_completion_tokens: Annotated[int, Field(strict=True, ge=1)]
+    plan_fallback_message: Annotated[str, AfterValidator(_require_non_blank)]
     max_question_chars: Annotated[int, Field(strict=True, ge=1)]
     max_history_messages: Annotated[int, Field(strict=True, ge=1)]
     max_history_chars: Annotated[int, Field(strict=True, ge=1)]

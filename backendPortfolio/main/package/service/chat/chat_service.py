@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import partial
 from types import MappingProxyType
 
-from main.package.ai.common import ChatMessage
+from main.package.ai.common import ChatMessage, Surface
 from main.package.ai.orchestrator import Orchestrator, OrchestratorDecision, QueryScope
 from main.package.ai.worker import Worker
 from main.package.repository import ChatRepository, NewMessage
@@ -23,6 +23,7 @@ class _Turn:
     chat_id: str
     message: str
     history: tuple[ChatMessage, ...]
+    surface: Surface
     decision: OrchestratorDecision
     context: str
 
@@ -63,7 +64,7 @@ class ChatService:
         turn = self._prepare_turn(session_id, chat_id, message)
 
         if turn.decision.is_in_scope:
-            answer = self._worker.respond(turn.message, turn.history, turn.context)
+            answer = self._worker.respond(turn.message, turn.history, turn.context, turn.surface)
         else:
             answer = self._fallback_messages[turn.decision.scope]
 
@@ -76,7 +77,7 @@ class ChatService:
         if turn.decision.is_in_scope:
             return ChatReplyStream(
                 complete=complete,
-                answer_stream=self._worker.stream(turn.message, turn.history, turn.context),
+                answer_stream=self._worker.stream(turn.message, turn.history, turn.context, turn.surface),
             )
 
         return ChatReplyStream(complete=complete, fallback_answer=self._fallback_messages[turn.decision.scope])
@@ -92,7 +93,8 @@ class ChatService:
             )
 
         history = self._history_window.select(chat.messages)
-        decision = self._orchestrator.route(text, history)
+        surface = Surface(chat.origin.value)
+        decision = self._orchestrator.route(text, history, surface)
         context = self._context_aggregator.aggregate(decision.required_contexts) if decision.needs_context else ""
 
         return _Turn(
@@ -100,6 +102,7 @@ class ChatService:
             chat_id=chat_id,
             message=text,
             history=history,
+            surface=surface,
             decision=decision,
             context=context,
         )

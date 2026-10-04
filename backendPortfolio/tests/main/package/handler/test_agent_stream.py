@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 from pathlib import Path
 
@@ -173,3 +174,51 @@ def test_unknown_chat_is_404(harness: Harness) -> None:
         response = client.post("/chats/01a0f968-0e19-7511-abcd-35c8c266e97e/agent/stream", json={"message": "hi"}, headers=headers)
 
     assert (response.status_code, response.json()["error"]) == (HTTPStatus.NOT_FOUND, "CHAT_NOT_FOUND")
+
+
+PLAN_JSON = json.dumps(
+    {"scope": "IN_SCOPE", "summary": "His backend work", "steps": [{"command": "/projects relay", "reason": "flagship"}]}
+)
+
+
+def test_plan_mode_sends_a_plan_event_then_done(harness: Harness) -> None:
+    harness.groq.decision = PLAN_JSON
+    with harness.client() as client:
+        headers = {SESSION_HEADER: new_session(client)}
+        chat_id = _cli_chat(client, headers)
+        response = client.post(f"/chats/{chat_id}/agent/stream", json={"message": "Show his backend", "mode": "plan"}, headers=headers)
+
+    events = sse_events(response.text)
+    assert [name for name, _ in events] == ["step", "plan", "token", "done"]
+    assert events[0][1] == {"label": "Planning terminal commands"}
+    assert events[1][1] == {"summary": "His backend work", "steps": [{"command": "/projects relay", "reason": "flagship"}]}
+    assert events[-1][1]["data"]["answer"] == "Plan: His backend work\n1. /projects relay -- flagship"
+    request = harness.groq.requests[0]
+    assert request["stream"] is False
+    assert request["response_format"]["json_schema"]["name"] == "agent_plan"
+
+
+def test_detailed_style_raises_the_answer_limit(harness: Harness) -> None:
+    with harness.client() as client:
+        headers = {SESSION_HEADER: new_session(client)}
+        chat_id = _cli_chat(client, headers)
+        client.post(f"/chats/{chat_id}/agent/stream", json={"message": "Who is he?", "style": "detailed"}, headers=headers)
+
+    assert harness.groq.requests[0]["max_completion_tokens"] == 1100
+
+
+@pytest.mark.parametrize("body", [{"message": "Hi", "style": "verbose"}, {"message": "Hi", "mode": "auto"}, {"message": "Hi", "extra": 1}])
+def test_unknown_options_are_rejected(harness: Harness, body: dict) -> None:
+    with harness.client() as client:
+        headers = {SESSION_HEADER: new_session(client)}
+        response = client.post(f"/chats/{_cli_chat(client, headers)}/agent/stream", json=body, headers=headers)
+
+    assert (response.status_code, response.json()["error"]) == (HTTPStatus.BAD_REQUEST, "VALIDATION_ERROR")
+
+
+def test_questions_about_the_terminal_read_the_site_context(harness: Harness) -> None:
+    (events,) = _ask(harness, "How many skills are in this cli?")
+
+    assert events[0] == ("step", {"label": "Reading profile · site"})
+    prompt = harness.groq.requests[0]["messages"][1]["content"]
+    assert "SITE:" in prompt and "skills in 5 plugins" in prompt

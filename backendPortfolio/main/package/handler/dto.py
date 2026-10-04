@@ -7,7 +7,7 @@ from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
 from main.package.repository import ChatOrigin, MessageRole
 from main.package.service.data import ProfessionalDetails
-from main.package.static.dto import Favorites, Interests, Lifestyle, PersonalityTraits, Profile, SpokenLanguage
+from main.package.static.dto import CliPlugin, CliSetting, CliSkill, Favorites, Interests, Lifestyle, PersonalityTraits, Profile, SpokenLanguage
 
 
 class _RequestModel(BaseModel):
@@ -29,6 +29,12 @@ class RenameChatRequest(_RequestModel):
 
 class SendMessageRequest(_RequestModel):
     message: str
+
+
+class AgentMessageRequest(_RequestModel):
+    message: str
+    style: Literal["concise", "detailed"] = "concise"
+    mode: Literal["answer", "plan"] = "answer"
 
 
 class ContactRequest(_RequestModel):
@@ -108,6 +114,23 @@ class StreamTokenResponse(_ResponseModel):
 
 class StreamStepResponse(_ResponseModel):
     label: str
+
+
+class PlanStepResponse(_ResponseModel):
+    command: str
+    reason: str
+
+
+class StreamPlanResponse(_ResponseModel):
+    summary: str
+    steps: tuple[PlanStepResponse, ...]
+
+
+class CliManifestResponse(_ResponseModel):
+    plugins: tuple[CliPlugin, ...]
+    skills: tuple[CliSkill, ...]
+    settings: tuple[CliSetting, ...]
+    fortunes: tuple[str, ...]
 
 
 class AccountsResponse[T](_ResponseModel):

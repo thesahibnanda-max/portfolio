@@ -48,6 +48,7 @@ Construction:
     and PROMPT_INJECTION. All settings come from main.config.AppConfig.agent
     (and chat.fallback_messages). A bad setting raises
     InvalidAgentServiceSettingError.
+    Answers are cached per style (variants "concise" and "detailed").
     validate(question) -> str: the trimmed question, or the validator's
     error; the API calls it before rate limiting.
     ScopeGate(*, injection_patterns, off_topic_patterns, context_keywords,
@@ -59,7 +60,17 @@ Construction:
     UTC day changes. It is a soft cap: it is checked before a call and
     charged after it, so parallel calls may pass it by one answer each.
 
-stream_message(session_id, chat_id, question) -> AgentTurnStream
+Plan mode (mode=AgentMode.PLAN):
+    After the same free pre-check, one structured call (SITE context always
+    included) proposes up to 5 terminal commands. Every command must start
+    with "/" and name a known skill or alias (skill_names, from the CLI
+    manifest); the rest are dropped. With no valid step the visitor gets
+    plan_fallback_message; an out-of-scope plan gets that scope's
+    fallback. The plan is returned on AgentTurnStream.plan, saved as a
+    readable "Plan: ..." message, and cached (variant "plan") for
+    first-turn questions. Plans are never replayed as answers.
+
+stream_message(session_id, chat_id, question, *, style=CONCISE, mode=ANSWER) -> AgentTurnStream
     Validates the question, loads the chat (ChatFullError when it has no
     room), then follows the steps above. Enter replies with a with block and
     iterate it like the chat stream.

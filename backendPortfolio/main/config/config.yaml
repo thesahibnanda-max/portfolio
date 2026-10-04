@@ -96,9 +96,14 @@ agent:
     model_id: "openai/gpt-oss-20b"
     weight: 1
     reasoning_effort: "low"
+    supports_strict_json_schema: true
   temperature: 0.6
   top_p: 1.0
-  max_completion_tokens: 600
+  styles:
+    concise: 600
+    detailed: 1100
+  plan_max_completion_tokens: 700
+  plan_fallback_message: "I couldn't turn that into terminal commands. Press Shift+Tab to switch to default mode and ask again for a direct answer."
   max_question_chars: 500
   max_history_messages: 6
   max_history_chars: 2500
@@ -126,6 +131,26 @@ agent:
     - "\\brecipe\\b"
   default_contexts: [PROFILE]
   context_keywords:
+    SITE:
+      - "cli"
+      - "terminal"
+      - "command"
+      - "slash"
+      - "plugin"
+      - "config"
+      - "setting"
+      - "mode"
+      - "autocomplete"
+      - "shortcut"
+      - "this site"
+      - "this website"
+      - "this portfolio"
+      - "what can you do"
+      - "how do i use"
+      - "skills in this"
+      - "skills does this"
+      - "skills do you"
+      - "skills are there"
     PROFILE:
       - "experience"
       - "work"

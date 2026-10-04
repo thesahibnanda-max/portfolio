@@ -1,0 +1,10 @@
+- Make it work, make it right, make it fast, in that order.
+- The fastest network call is the one you never make.
+- Idempotency is a gift you give your future on-call self.
+- Every queue is a promise that someone will eventually read it.
+- Logs tell you what happened; metrics tell you how often; traces tell you why.
+- A retry without a backoff is a denial-of-service attack you wrote yourself.
+- Cache invalidation is hard, so give every cache a TTL.
+- The best distributed lock is the one you designed away.
+- Measure twice, deploy once, and keep the rollback one command away.
+- Exactly-once delivery is at-least-once delivery plus idempotency.

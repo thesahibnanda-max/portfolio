@@ -154,6 +154,16 @@ def test_details(client: TestClient, path: str, key: str) -> None:
     assert key in data
 
 
+def test_cli_manifest_lists_skills_plugins_settings_and_fortunes(client: TestClient) -> None:
+    data = _assert_envelope(client.get("/details/cli"), HTTPStatus.OK)
+
+    assert set(data) == {"plugins", "skills", "settings", "fortunes"}
+    assert {"name", "aliases", "usage", "summary", "group", "plugin", "arg_source"} == set(data["skills"][0])
+    assert {plugin["name"] for plugin in data["plugins"]} >= {"core", "extras"}
+    assert data["settings"][0]["key"] == "mode"
+    assert data["fortunes"]
+
+
 def test_personality_never_exposes_private_details(client: TestClient) -> None:
     data = _assert_envelope(client.get("/details/personality"), HTTPStatus.OK)
 
