@@ -1,6 +1,7 @@
 import { type Dispatch, type RefObject, useCallback, useEffect, useRef } from "react";
+import type { AgentOptions } from "../../../lib/api/chatStream";
 import { ApiError } from "../../../lib/api/errors";
-import type { ChatSummary } from "../../../lib/api/schemas";
+import type { ChatSummary, StreamPlan } from "../../../lib/api/schemas";
 import { chatTitleFrom, noticeFor } from "../../../lib/chat/notices";
 import { getChatApi } from "../../../lib/chat/services";
 import { error, hint, type Line, span } from "../../../lib/cli/blocks";
@@ -56,20 +57,30 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
   );
 
   const streamTurn = useCallback(
-    async (question: string, id: string, signal: AbortSignal, mayRenewSession: boolean): Promise<void> => {
+    async (
+      question: string,
+      id: string,
+      signal: AbortSignal,
+      mayRenewSession: boolean,
+      options: AgentOptions,
+    ): Promise<StreamPlan | null> => {
       const api = getChatApi();
       let createdChatId: string | null = null;
       let completed = false;
+      let plan: StreamPlan | null = null;
       try {
         let chatId = stateRef.current.chatId;
         if (chatId === null) {
           chatId = (await api.createChat(chatTitleFrom(question), "cli")).chat_id;
           createdChatId = chatId;
         }
-        const events = await api.streamAgentMessage(chatId, question, signal);
+        const events = await api.streamAgentMessage(chatId, question, signal, options);
         for await (const event of events) {
           if (event.type === "step") {
             dispatch({ type: "answer-step", id, label: event.label });
+          } else if (event.type === "plan") {
+            plan = event.plan;
+            dispatch({ type: "answer-plan", id, plan: event.plan });
           } else if (event.type === "token") {
             dispatch({ type: "answer-token", id, text: event.text });
           } else if (event.type === "done") {
@@ -89,16 +100,19 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
         if (signal.aborted) {
           dispatch({ type: "answer-ended", id, status: "stopped", note: STOPPED_NOTE, at: Date.now() });
         }
+        return completed && !signal.aborted ? plan : null;
       } catch (cause) {
         if (signal.aborted) {
           dispatch({ type: "answer-ended", id, status: "stopped", note: STOPPED_NOTE, at: Date.now() });
-        } else if (cause instanceof ApiError && cause.isSessionExpired && mayRenewSession) {
+          return null;
+        }
+        if (cause instanceof ApiError && cause.isSessionExpired && mayRenewSession) {
           await api.renewSession();
           dispatch({ type: "chat-changed", chatId: null });
-          await streamTurn(question, id, signal, false);
-        } else {
-          fail(id, cause);
+          return await streamTurn(question, id, signal, false, options);
         }
+        fail(id, cause);
+        return null;
       } finally {
         if (createdChatId !== null && !completed) {
           void discardChat(createdChatId);
@@ -109,7 +123,7 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
   );
 
   const ask = useCallback(
-    async (question: string) => {
+    async (question: string, options: AgentOptions): Promise<StreamPlan | null> => {
       const limitedUntil = stateRef.current.rateLimitedUntil;
       if (limitedUntil !== null && limitedUntil > Date.now()) {
         print({
@@ -119,14 +133,14 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
             hint("Slash commands work meanwhile, e.g. /projects or /stats."),
           ],
         });
-        return;
+        return null;
       }
       const id = newId();
       const controller = new AbortController();
       abortRef.current = controller;
       dispatch({ type: "answer-started", id, at: Date.now() });
       try {
-        await streamTurn(question, id, controller.signal, true);
+        return await streamTurn(question, id, controller.signal, true, options);
       } finally {
         abortRef.current = null;
         dispatch({ type: "busy-changed", busy: false });
@@ -197,6 +211,7 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
                 startedAt: at,
                 finishedAt: at,
                 note: "from history",
+                plan: null,
               },
         );
         dispatch({ type: "screen-cleared" });

@@ -21,6 +21,7 @@ const STEP_CALLS: readonly (readonly [string, string])[] = [
   ["Reading ", "Read"],
   ["Recalling", "Recall"],
   ["Checking", "Check"],
+  ["Planning", "Plan"],
 ];
 
 export function stepCall(label: string): { readonly name: string; readonly argument: string } {

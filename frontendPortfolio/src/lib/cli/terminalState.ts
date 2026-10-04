@@ -1,4 +1,4 @@
-import type { QueryScope } from "../api/schemas";
+import type { QueryScope, StreamPlan } from "../api/schemas";
 import type { Block } from "./blocks";
 
 export type AnswerStatus = "streaming" | "complete" | "stopped" | "failed";
@@ -17,6 +17,7 @@ export type Entry =
       readonly startedAt: number;
       readonly finishedAt: number | null;
       readonly note: string | null;
+      readonly plan: StreamPlan | null;
     };
 
 export interface TerminalState {
@@ -34,6 +35,7 @@ export type TerminalAction =
   | { readonly type: "answer-started"; readonly id: string; readonly at: number }
   | { readonly type: "answer-step"; readonly id: string; readonly label: string }
   | { readonly type: "answer-token"; readonly id: string; readonly text: string }
+  | { readonly type: "answer-plan"; readonly id: string; readonly plan: StreamPlan }
   | {
       readonly type: "answer-completed";
       readonly id: string;
@@ -86,6 +88,7 @@ export function terminalReducer(state: TerminalState, action: TerminalAction): T
             startedAt: action.at,
             finishedAt: null,
             note: null,
+            plan: null,
           },
         ].slice(-MAX_ENTRIES),
       };
@@ -93,6 +96,8 @@ export function terminalReducer(state: TerminalState, action: TerminalAction): T
       return updateAnswer(state, action.id, (answer) => ({ ...answer, steps: [...answer.steps, action.label] }));
     case "answer-token":
       return updateAnswer(state, action.id, (answer) => ({ ...answer, text: answer.text + action.text }));
+    case "answer-plan":
+      return updateAnswer(state, action.id, (answer) => ({ ...answer, plan: action.plan }));
     case "answer-completed":
       return {
         ...updateAnswer(state, action.id, (answer) => ({

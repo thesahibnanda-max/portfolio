@@ -14,19 +14,27 @@ const VERB_MS = 2400;
 
 type AnswerEntry = Extract<Entry, { kind: "answer" }>;
 
-function Spinner({ startedAt, chars }: { readonly startedAt: number; readonly chars: number }) {
+function Spinner({
+  startedAt,
+  chars,
+  animated,
+}: {
+  readonly startedAt: number;
+  readonly chars: number;
+  readonly animated: boolean;
+}) {
   const [now, setNow] = useState(startedAt);
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), FRAME_MS);
+    const timer = window.setInterval(() => setNow(Date.now()), animated ? FRAME_MS : 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [animated]);
   const elapsed = Math.max(0, now - startedAt);
   const frame = SPINNER[Math.floor(elapsed / FRAME_MS) % SPINNER.length];
   const verb = VERBS[Math.floor(elapsed / VERB_MS) % VERBS.length];
   return (
     <p className="term-bullet mt-[0.9em] text-accent" role="status">
       <span aria-hidden="true">
-        <span className="motion-reduce:hidden">{frame}</span>
+        <span className="motion-reduce:hidden">{animated ? frame : "✻"}</span>
         <span className="hidden motion-reduce:inline">✻</span>
       </span>
       <span>
@@ -39,7 +47,7 @@ function Spinner({ startedAt, chars }: { readonly startedAt: number; readonly ch
   );
 }
 
-function Welcome({ data }: { readonly data: CliData }) {
+function Welcome({ data, summary }: { readonly data: CliData; readonly summary: string }) {
   const slug = data.ownerName.toLowerCase().replace(/\s+/g, "-");
   return (
     <section aria-label="Welcome">
@@ -52,6 +60,7 @@ function Welcome({ data }: { readonly data: CliData }) {
         </p>
         <p className="mt-[0.6em] pl-[2ch] text-faint">/help for help, /go-back to return</p>
         <p className="hidden pl-[2ch] text-faint sm:block">cwd: ~/portfolio/{slug}</p>
+        <p className="pl-[2ch] text-faint">{summary}</p>
       </div>
       <p className="mt-[1.2em] text-muted">Tips for getting started:</p>
       <ol className="term-tips mt-[0.4em] text-muted">
@@ -132,10 +141,46 @@ function answerMeta(entry: AnswerEntry): string {
   return checked ? "0 AI calls" : `1 AI call · ${((entry.finishedAt - entry.startedAt) / 1000).toFixed(1)}s`;
 }
 
-function AnswerView({ entry }: { readonly entry: AnswerEntry }) {
+function PlanView({ plan }: { readonly plan: NonNullable<AnswerEntry["plan"]> }) {
+  return (
+    <div className="mt-[0.6em]" data-plan>
+      <p className="term-bullet">
+        <span aria-hidden="true" className="text-plan">
+          ⏺
+        </span>
+        <span>
+          <span className="font-semibold">Plan</span>
+          {plan.summary !== "" && <span className="text-muted"> · {plan.summary}</span>}
+        </span>
+      </p>
+      <ol className="term-body">
+        {withKeys(plan.steps, describe).map(([key, step], index) => (
+          <li key={key} className="term-bullet term-tips">
+            <span className="text-faint">{index + 1}.</span>
+            <span>
+              <span className="font-semibold">{step.command}</span>
+              {step.reason !== "" && <span className="text-faint"> · {step.reason}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function AnswerView({
+  entry,
+  showCost,
+  animated,
+}: {
+  readonly entry: AnswerEntry;
+  readonly showCost: boolean;
+  readonly animated: boolean;
+}) {
   const isStreaming = entry.status === "streaming";
-  const meta = answerMeta(entry);
-  const hasText = entry.text !== "";
+  const fullMeta = answerMeta(entry);
+  const meta = showCost || entry.note !== null ? fullMeta : "";
+  const hasText = entry.text !== "" || entry.plan !== null;
   return (
     <div className="term-entry">
       {entry.steps.map((step) => {
@@ -155,13 +200,17 @@ function AnswerView({ entry }: { readonly entry: AnswerEntry }) {
           </div>
         );
       })}
-      {hasText && (
-        <div className="term-bullet mt-[0.6em]">
-          <span aria-hidden="true">⏺</span>
-          <Markdown text={entry.text} />
-        </div>
+      {entry.plan !== null ? (
+        <PlanView plan={entry.plan} />
+      ) : (
+        entry.text !== "" && (
+          <div className="term-bullet mt-[0.6em]">
+            <span aria-hidden="true">⏺</span>
+            <Markdown text={entry.text} />
+          </div>
+        )
       )}
-      {isStreaming && <Spinner startedAt={entry.startedAt} chars={entry.text.length} />}
+      {isStreaming && <Spinner startedAt={entry.startedAt} chars={entry.text.length} animated={animated} />}
       {meta !== "" && (
         <p className={`term-body mt-[0.2em] ${entry.status === "failed" ? "text-danger" : "text-faint"}`}>{meta}</p>
       )}
@@ -169,10 +218,18 @@ function AnswerView({ entry }: { readonly entry: AnswerEntry }) {
   );
 }
 
-export const EntryView = memo(function EntryView({ entry, data }: { readonly entry: Entry; readonly data: CliData }) {
+interface EntryViewProps {
+  readonly entry: Entry;
+  readonly data: CliData;
+  readonly summary: string;
+  readonly showCost: boolean;
+  readonly animated: boolean;
+}
+
+export const EntryView = memo(function EntryView({ entry, data, summary, showCost, animated }: EntryViewProps) {
   switch (entry.kind) {
     case "welcome":
-      return <Welcome data={data} />;
+      return <Welcome data={data} summary={summary} />;
     case "input":
       return (
         <p className="term-echo">
@@ -184,6 +241,6 @@ export const EntryView = memo(function EntryView({ entry, data }: { readonly ent
     case "output":
       return <OutputView blocks={entry.blocks} />;
     case "answer":
-      return <AnswerView entry={entry} />;
+      return <AnswerView entry={entry} showCost={showCost} animated={animated} />;
   }
 });

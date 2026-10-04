@@ -1,4 +1,4 @@
-import { COMMANDS, type Command, findCommand } from "./commands";
+import { type Command, findCommand, type Registry } from "./commands";
 import type { CliData } from "./data";
 import { normalize } from "./parser";
 
@@ -10,16 +10,16 @@ export interface Suggestion {
 
 const MAX_SUGGESTIONS = 8;
 
-export function suggest(input: string, data: CliData): readonly Suggestion[] {
+export function suggest(input: string, registry: Registry, data: CliData): readonly Suggestion[] {
   if (!input.startsWith("/") || input.includes("\n")) {
     return [];
   }
   const spaceAt = input.indexOf(" ");
   if (spaceAt === -1) {
-    return commandSuggestions(input.slice(1).toLowerCase());
+    return commandSuggestions(registry, input.slice(1).toLowerCase());
   }
-  const command = findCommand(input.slice(1, spaceAt));
-  if (command?.argOptions === undefined) {
+  const command = findCommand(registry, input.slice(1, spaceAt));
+  if (command === undefined || !command.enabled || command.argOptions === undefined) {
     return [];
   }
   return argumentSuggestions(command, input.slice(spaceAt + 1), data);
@@ -33,8 +33,9 @@ export function ghostText(input: string, suggestions: readonly Suggestion[]): st
   return first.value.slice(input.length);
 }
 
-function commandSuggestions(typed: string): readonly Suggestion[] {
-  const ranked = COMMANDS.map((command) => ({ command, score: commandScore(command, typed) }))
+function commandSuggestions(registry: Registry, typed: string): readonly Suggestion[] {
+  const ranked = registry.commands
+    .map((command) => ({ command, score: commandScore(command, typed) }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score);
   return ranked.slice(0, typed === "" ? ranked.length : MAX_SUGGESTIONS).map(({ command }) => ({

@@ -27,6 +27,30 @@ function chat(id: string, origin: "chat" | "cli" = "chat", title = "What's his C
   return { chat_id: id, title, created_at: NOW, updated_at: NOW, origin };
 }
 
+const PLAN = {
+  summary: "Shows his backend work",
+  steps: [
+    { command: "/projects relay", reason: "his flagship Go project" },
+    { command: "/experience cred", reason: "payments at scale" },
+  ],
+};
+
+function planBody(chatId: string): string {
+  const text = `Plan: ${PLAN.summary}\n1. /projects relay -- his flagship Go project\n2. /experience cred -- payments at scale`;
+  const reply = {
+    chat: { ...chat(chatId, "cli"), messages: [] },
+    answer: text,
+    scope: "IN_SCOPE",
+    required_contexts: ["SITE"],
+  };
+  return [
+    'event: step\ndata: {"label":"Planning terminal commands"}\n\n',
+    `event: plan\ndata: ${JSON.stringify(PLAN)}\n\n`,
+    `event: token\ndata: ${JSON.stringify({ text })}\n\n`,
+    `event: done\ndata: ${envelope(reply)}\n\n`,
+  ].join("");
+}
+
 function agentBody(chatId: string, answer: string): string {
   const reply = {
     chat: { ...chat(chatId, "cli"), messages: [] },
@@ -63,6 +87,7 @@ export class MockApi {
   readonly contactBodies: unknown[] = [];
   readonly createdChats: unknown[] = [];
   readonly agentQuestions: string[] = [];
+  readonly agentBodies: { message: string; style?: string; mode?: string }[] = [];
   readonly deletedChats: string[] = [];
   #releaseStream: (() => void) | null = null;
 
@@ -185,8 +210,9 @@ export class MockApi {
   }
 
   async #agentStream(route: Route, chatId: string): Promise<void> {
-    const body = route.request().postDataJSON() as { message: string };
+    const body = route.request().postDataJSON() as { message: string; style?: string; mode?: string };
     this.agentQuestions.push(body.message);
+    this.agentBodies.push(body);
     if (this.options.rateLimitAgent === true) {
       await route.fulfill({
         status: 429,
@@ -205,7 +231,10 @@ export class MockApi {
       status: 200,
       contentType: "text/event-stream",
       headers: corsHeaders(),
-      body: agentBody(chatId, this.options.agentAnswer ?? "Sahib is a **backend engineer** who builds `Go` systems."),
+      body:
+        body.mode === "plan"
+          ? planBody(chatId)
+          : agentBody(chatId, this.options.agentAnswer ?? "Sahib is a **backend engineer** who builds `Go` systems."),
     });
   }
 

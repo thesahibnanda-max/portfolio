@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Block } from "../../src/lib/cli/blocks";
 import {
-  COMMANDS,
   type CommandEffect,
   closestCommand,
   editDistance,
@@ -30,19 +29,19 @@ function textOf(blocks: readonly Block[]): string {
 
 describe("command registry", () => {
   it("has unique names and aliases", () => {
-    const names = COMMANDS.flatMap((command) => [command.name, ...command.aliases]);
+    const names = CONTEXT.registry.all.flatMap((command) => [command.name, ...command.aliases]);
     expect(new Set(names).size).toBe(names.length);
   });
 
   it("finds commands by name or alias, case-insensitively", () => {
-    expect(findCommand("EXP")?.name).toBe("experience");
-    expect(findCommand("quit")?.name).toBe("go-back");
-    expect(findCommand("nope")).toBeUndefined();
+    expect(findCommand(CONTEXT.registry, "EXP")?.name).toBe("experience");
+    expect(findCommand(CONTEXT.registry, "quit")?.name).toBe("go-back");
+    expect(findCommand(CONTEXT.registry, "nope")).toBeUndefined();
   });
 
   it("suggests the closest command for typos", () => {
-    expect(closestCommand("projcts")?.name).toBe("projects");
-    expect(closestCommand("xyzzy")).toBeUndefined();
+    expect(closestCommand(CONTEXT.registry, "projcts")?.name).toBe("projects");
+    expect(closestCommand(CONTEXT.registry, "xyzzy")).toBeUndefined();
     expect(editDistance("kitten", "sitting")).toBe(3);
     const unknown = textOf(printed(run("/projcts")));
     expect(unknown).toContain("Unknown command /projcts.");
@@ -54,7 +53,7 @@ describe("command registry", () => {
 describe("explore commands", () => {
   it("/help lists every command group and shortcut", () => {
     const help = textOf(printed(run("/help")));
-    for (const command of COMMANDS) {
+    for (const command of CONTEXT.registry.commands) {
       expect(help).toContain(command.usage);
     }
     expect(help).toContain("Ctrl+L");

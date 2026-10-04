@@ -1,6 +1,15 @@
 ---
 import Terminal from "../components/islands/cli/Terminal";
-import { builtAt, codeforces, github, leetcode, professional, profile, resumeUrl } from "../content/snapshot";
+import {
+  builtAt,
+  cliManifest,
+  codeforces,
+  github,
+  leetcode,
+  professional,
+  profile,
+  resumeUrl,
+} from "../content/snapshot";
 import CliLayout from "../layouts/CliLayout.astro";
 import { type CliData, summarizeLeetcode } from "../lib/cli/data";
 
@@ -19,6 +28,7 @@ const data: CliData = {
   })),
   resumeUrl,
   builtAt: builtAt.toISOString(),
+  manifest: cliManifest,
 };
 ---
 

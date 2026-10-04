@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ghostText, suggest } from "../../src/lib/cli/autocomplete";
 import { asciiBar, link, safeHref } from "../../src/lib/cli/blocks";
-import { COMMANDS } from "../../src/lib/cli/commands";
 import { CommandHistory } from "../../src/lib/cli/history";
 import { withKeys } from "../../src/lib/cli/keys";
 import { decideEnter, stepCall } from "../../src/lib/cli/menu";
 import { findByName, normalize, parseInput, tokenize } from "../../src/lib/cli/parser";
-import { DATA } from "./cliData";
+import { CONTEXT, DATA } from "./cliData";
+
+const REGISTRY = CONTEXT.registry;
+
 import { MemoryStorage } from "./support";
 
 describe("parseInput", () => {
@@ -40,34 +42,34 @@ describe("parseInput", () => {
 
 describe("autocomplete", () => {
   it("lists every command for a bare slash and ranks prefixes first", () => {
-    expect(suggest("/", DATA).length).toBeGreaterThan(5);
-    expect(suggest("/pro", DATA)[0]?.value).toBe("/projects ");
-    expect(suggest("/wh", DATA)[0]).toMatchObject({ value: "/whoami", label: "/whoami" });
-    expect(suggest("/quit", DATA)[0]?.label).toBe("/go-back");
-    expect(suggest("/zzz", DATA)).toEqual([]);
+    expect(suggest("/", REGISTRY, DATA).length).toBeGreaterThan(5);
+    expect(suggest("/pro", REGISTRY, DATA)[0]?.value).toBe("/projects ");
+    expect(suggest("/wh", REGISTRY, DATA)[0]).toMatchObject({ value: "/whoami", label: "/whoami" });
+    expect(suggest("/quit", REGISTRY, DATA)[0]?.label).toBe("/go-back");
+    expect(suggest("/zzz", REGISTRY, DATA)).toEqual([]);
   });
 
   it("completes arguments from the data without duplicates", () => {
-    const companies = suggest("/experience ", DATA).map((suggestion) => suggestion.label);
+    const companies = suggest("/experience ", REGISTRY, DATA).map((suggestion) => suggestion.label);
     expect(companies).toContain("CRED");
     expect(new Set(companies).size).toBe(companies.length);
-    expect(suggest("/projects heli", DATA)[0]?.value).toBe(
+    expect(suggest("/projects heli", REGISTRY, DATA)[0]?.value).toBe(
       "/projects Helios - Distributed Real-Time Streaming & Analytics Platform",
     );
-    expect(suggest("/stats g", DATA).map((suggestion) => suggestion.label)).toEqual(["github"]);
-    expect(suggest("/clear x", DATA)).toEqual([]);
+    expect(suggest("/stats g", REGISTRY, DATA).map((suggestion) => suggestion.label)).toEqual(["github"]);
+    expect(suggest("/clear x", REGISTRY, DATA)).toEqual([]);
   });
 
   it("never completes questions or multi-line input", () => {
-    expect(suggest("what about /projects", DATA)).toEqual([]);
-    expect(suggest("/pro\nx", DATA)).toEqual([]);
+    expect(suggest("what about /projects", REGISTRY, DATA)).toEqual([]);
+    expect(suggest("/pro\nx", REGISTRY, DATA)).toEqual([]);
   });
 
   it("shows ghost text only for a matching prefix", () => {
-    expect(ghostText("/pro", suggest("/pro", DATA))).toBe("jects ");
-    expect(ghostText("", suggest("/", DATA))).toBe("");
+    expect(ghostText("/pro", suggest("/pro", REGISTRY, DATA))).toBe("jects ");
+    expect(ghostText("", suggest("/", REGISTRY, DATA))).toBe("");
     expect(ghostText("/zzz", [])).toBe("");
-    expect(ghostText("/quit", suggest("/quit", DATA))).toBe("");
+    expect(ghostText("/quit", suggest("/quit", REGISTRY, DATA))).toBe("");
   });
 });
 
@@ -159,7 +161,8 @@ describe("stepCall", () => {
 
 describe("full slash menu", () => {
   it("lists every command for a bare slash", () => {
-    expect(suggest("/", DATA)).toHaveLength(COMMANDS.length);
-    expect(suggest("/e", DATA).length).toBeLessThanOrEqual(8);
+    expect(suggest("/", REGISTRY, DATA)).toHaveLength(REGISTRY.commands.length);
+    expect(REGISTRY.commands).toHaveLength(18);
+    expect(suggest("/e", REGISTRY, DATA).length).toBeLessThanOrEqual(8);
   });
 });

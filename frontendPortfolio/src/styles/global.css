@@ -829,6 +829,34 @@
     display: none;
   }
 
+  .text-plan {
+    color: #5eead4;
+  }
+
+  .term-root[data-motion="off"] *,
+  .term-root[data-motion="off"] {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .term-setting {
+    display: grid;
+    grid-template-columns: 2ch minmax(10ch, 18ch) minmax(8ch, 12ch) minmax(0, 1fr);
+    column-gap: 1.5ch;
+    cursor: pointer;
+    color: var(--color-muted);
+  }
+
+  .term-setting[aria-selected="true"] {
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 639px) {
+    .term-setting {
+      grid-template-columns: 2ch minmax(0, 1fr) max-content;
+    }
+  }
+
   @media (hover: hover) {
     .touch-only {
       display: none !important;

@@ -90,11 +90,13 @@ The site is static, so both values are read **at build time**. Astro's `astro:en
 - `src/pages/index.astro`: the single page, composed from the build-time snapshot (`src/content/snapshot.ts`).
 - `src/components/sections/`: static sections (hero, experience, projects, competitive programming, open source, skills, achievements, off the clock, contact).
 - `src/components/islands/chat/`: the chat panel, a React island loaded by `src/scripts/chatLauncher.ts` on ⌘K or a click.
-- `src/pages/cli.astro` and `src/components/islands/cli/`: the **Portfolio Agent CLI**, a full-screen terminal opened from the chat panel or the `>_` link in the nav.
-  - Slash commands (`/whoami`, `/experience [company]`, `/projects [name]`, `/skills [area]`, `/education`, `/achievements`, `/stats [platform]`, `/resume`, `/contact`, `/history`, `/open <n>`, `/new`, `/clear`, `/help`, `/go-back`) run in the browser from build-time data at 0 tokens. `/stats` refreshes live.
-  - Plain text goes to the agent.
-  - It has a slash menu with Tab/→ completion and ghost text, ↑↓ history, Esc/Ctrl+C to stop, Ctrl+L to clear, and quick-command chips on phones.
-  - The pure logic lives in `src/lib/cli/`, including a safe markdown subset renderer (React elements only, http/https/mailto links only).
+- `src/pages/cli.astro` and `src/components/islands/cli/`: the **Portfolio Agent CLI**, a Claude Code-style terminal opened from the chat panel or the `>_` link in the nav.
+  - **Skills:** every skill (slash command) is declared once in the backend's `main/package/static/cli.json` and served by `GET /details/cli`. The UI reads it at build time and runs each skill locally (0 tokens). The agent gets it through the SITE context, so it can answer questions like "how many skills are in this cli?". A unit test keeps the frontend fixture in sync with the backend file.
+  - **Plugins:** `core`, `portfolio`, `stats`, `agent` and `extras` (`/neofetch`, `/fortune`; off by default), managed with `/plugins enable|disable <name>`.
+  - **`/config`:** an interactive panel, or `/config <key> <value>`. It sets the mode, answer length (concise/detailed), autocomplete, the AI-cost line, the accent colour and animations, saved per browser.
+  - **Modes:** Shift+Tab cycles default → ⏵⏵ auto-run (the agent plans commands and runs them) → ⏸ plan mode (it shows the plan; Enter runs it, Esc cancels). Phones get a mode chip.
+  - **The AI knows where it is:** prompts carry the surface (chat panel or CLI), so answers in the terminal point to commands.
+  - **Other features:** a slash menu with Tab/→ completion and ghost text, ↑↓ history, Esc/Ctrl+C to stop, Ctrl+L to clear, and terminal conversations reopening from the chat's ☰ history. A safe markdown subset renderer (React elements only, http/https/mailto links) lives in `src/lib/cli/`.
 - `src/lib/api/`: a typed client. Every response is validated with zod at runtime. Errors become `ApiError`, which carries the backend's status, code and `Retry-After`.
 - `src/scripts/`: small vanilla scripts: the hero WebGL shader (ogl), reveals, count-ups, smooth scroll (Lenis), live stats, skill highlighting, and the rating chart (uPlot).
 

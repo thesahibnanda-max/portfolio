@@ -7,6 +7,8 @@ import {
   chatReplySchema,
   envelopeSchema,
   errorResponseSchema,
+  type StreamPlan,
+  streamPlanSchema,
   streamStepSchema,
   streamTokenSchema,
 } from "./schemas";
@@ -16,7 +18,10 @@ export type ChatStreamEvent =
   | { readonly type: "done"; readonly reply: ChatReply }
   | { readonly type: "error"; readonly error: ApiError };
 
-export type AgentStreamEvent = ChatStreamEvent | { readonly type: "step"; readonly label: string };
+export type AgentStreamEvent =
+  | ChatStreamEvent
+  | { readonly type: "step"; readonly label: string }
+  | { readonly type: "plan"; readonly plan: StreamPlan };
 
 const doneSchema = envelopeSchema(chatReplySchema);
 
@@ -31,13 +36,18 @@ export async function* streamChatMessage(
     client,
     `/chats/${encodeURIComponent(chatId)}/messages/stream`,
     sessionId,
-    message,
+    { message },
     signal,
   )) {
-    if (event.type !== "step") {
+    if (event.type !== "step" && event.type !== "plan") {
       yield event;
     }
   }
+}
+
+export interface AgentOptions {
+  readonly style: "concise" | "detailed";
+  readonly mode: "answer" | "plan";
 }
 
 export function streamAgentMessage(
@@ -46,20 +56,27 @@ export function streamAgentMessage(
   chatId: string,
   message: string,
   signal?: AbortSignal,
+  options: AgentOptions = { style: "concise", mode: "answer" },
 ): AsyncGenerator<AgentStreamEvent, void, undefined> {
-  return streamEvents(client, `/chats/${encodeURIComponent(chatId)}/agent/stream`, sessionId, message, signal);
+  return streamEvents(
+    client,
+    `/chats/${encodeURIComponent(chatId)}/agent/stream`,
+    sessionId,
+    { message, ...options },
+    signal,
+  );
 }
 
 async function* streamEvents(
   client: ApiClient,
   path: string,
   sessionId: string,
-  message: string,
+  body: Readonly<Record<string, string>>,
   signal?: AbortSignal,
 ): AsyncGenerator<AgentStreamEvent, void, undefined> {
   const response = await client.send(path, {
     method: "POST",
-    body: { message },
+    body,
     sessionId,
     signal,
   });
@@ -75,7 +92,7 @@ async function* streamEvents(
       continue;
     }
     yield parsed;
-    if (parsed.type !== "token" && parsed.type !== "step") {
+    if (parsed.type === "done" || parsed.type === "error") {
       finished = true;
       break;
     }
@@ -91,6 +108,8 @@ export function toChatStreamEvent(name: string | undefined, data: string): Agent
   switch (name) {
     case "step":
       return { type: "step", label: validate(streamStepSchema, payload, name).label };
+    case "plan":
+      return { type: "plan", plan: validate(streamPlanSchema, payload, name) };
     case "token":
       return { type: "token", text: validate(streamTokenSchema, payload, name).text };
     case "done":

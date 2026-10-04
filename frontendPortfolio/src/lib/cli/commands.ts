@@ -1,3 +1,4 @@
+import type { CliArgSource, CliManifest } from "../api/schemas";
 import {
   codeforcesRank,
   experienceDuration,
@@ -9,6 +10,7 @@ import {
 import { type Block, error, hint, type Line, link, span } from "./blocks";
 import type { CliData, LiveStats } from "./data";
 import { findByName } from "./parser";
+import { type CliSettings, changePlugin, changeSetting, isPluginEnabled, settingValue } from "./settings";
 
 export type StatsTarget = "all" | "leetcode" | "codeforces" | "github";
 
@@ -21,7 +23,9 @@ export type CommandEffect =
   | { readonly kind: "new-chat" }
   | { readonly kind: "list-chats" }
   | { readonly kind: "open-chat"; readonly index: number }
-  | { readonly kind: "stats"; readonly target: StatsTarget };
+  | { readonly kind: "stats"; readonly target: StatsTarget }
+  | { readonly kind: "config-panel" }
+  | { readonly kind: "settings"; readonly settings: CliSettings; readonly blocks: readonly Block[] };
 
 export interface CommandInput {
   readonly args: readonly string[];
@@ -31,7 +35,12 @@ export interface CommandInput {
 export interface CommandContext {
   readonly data: CliData;
   readonly now: Date;
+  readonly settings: CliSettings;
+  readonly registry: Registry;
+  readonly random: () => number;
 }
+
+export type Executor = (input: CommandInput, context: CommandContext) => CommandEffect;
 
 export type CommandGroup = "Explore" | "AI" | "Session";
 
@@ -41,8 +50,15 @@ export interface Command {
   readonly usage: string;
   readonly summary: string;
   readonly group: CommandGroup;
-  readonly argOptions?: (data: CliData) => readonly string[];
-  readonly run: (input: CommandInput, context: CommandContext) => CommandEffect;
+  readonly plugin: string;
+  readonly enabled: boolean;
+  readonly argOptions: ((data: CliData) => readonly string[]) | undefined;
+  readonly run: Executor;
+}
+
+export interface Registry {
+  readonly all: readonly Command[];
+  readonly commands: readonly Command[];
 }
 
 const STATS_TARGETS: readonly StatsTarget[] = ["leetcode", "codeforces", "github"];
@@ -58,6 +74,7 @@ export const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["Esc / Ctrl+C", "close the menu, or stop an answer"],
   ["Ctrl+L", "clear the screen"],
   ["Ctrl+U", "clear the line"],
+  ["Shift+Tab", "cycle mode: default, auto-run, plan"],
 ];
 
 function print(...blocks: readonly Block[]): CommandEffect {
@@ -103,23 +120,152 @@ function socialPairs(data: CliData): (readonly [string, Line])[] {
   return pairs;
 }
 
-function help(): CommandEffect {
+export function skillSummary(registry: Registry, data: CliData, settings: CliSettings): string {
+  const enabledPlugins = data.manifest.plugins.filter((plugin) => isPluginEnabled(settings, plugin.name)).length;
+  return `${registry.commands.length} of ${registry.all.length} skills on · ${data.manifest.plugins.length} plugins (${enabledPlugins} on)`;
+}
+
+function help(_input: CommandInput, { registry, data, settings }: CommandContext): CommandEffect {
   const groups: readonly CommandGroup[] = ["Explore", "AI", "Session"];
-  const blocks: Block[] = [];
+  const blocks: Block[] = [{ kind: "heading", text: "Skills", meta: skillSummary(registry, data, settings) }];
   for (const group of groups) {
+    const commands = registry.commands.filter((command) => command.group === group);
+    if (commands.length === 0) {
+      continue;
+    }
     blocks.push({ kind: "heading", text: group });
-    blocks.push({
-      kind: "pairs",
-      pairs: COMMANDS.filter((command) => command.group === group).map((command) => [
-        command.usage,
-        [span(command.summary, "muted")],
-      ]),
-    });
+    blocks.push({ kind: "pairs", pairs: commands.map((command) => [command.usage, [span(command.summary, "muted")]]) });
   }
   blocks.push({ kind: "heading", text: "Shortcuts" });
   blocks.push({ kind: "pairs", pairs: SHORTCUTS.map(([keys, action]) => [keys, [span(action, "muted")]]) });
-  blocks.push(hint("Anything without a leading / goes to the agent, e.g. what is he building right now?"));
+  blocks.push(hint("Anything without a leading / goes to the agent. /plugins adds more skills."));
   return print(...blocks);
+}
+
+function config({ args }: CommandInput, { data, settings }: CommandContext): CommandEffect {
+  const [key, value] = args;
+  if (key === undefined) {
+    return { kind: "config-panel" };
+  }
+  if (value === undefined) {
+    const setting = data.manifest.settings.find((candidate) => candidate.key.toLowerCase() === key.toLowerCase());
+    if (setting === undefined) {
+      return print(
+        error(`Unknown setting "${key}".`),
+        hint(`Settings: ${data.manifest.settings.map((item) => item.key).join(", ")}`),
+      );
+    }
+    return print({
+      kind: "pairs",
+      pairs: [
+        [setting.label, [span(settingValue(settings, setting.key), "text", true)]],
+        ["Options", [span(setting.options.join(" · "), "muted")]],
+        ["", [span(setting.summary, "faint")]],
+      ],
+    });
+  }
+  const change = changeSetting(settings, data.manifest, key, value);
+  return change.ok
+    ? {
+        kind: "settings",
+        settings: change.settings,
+        blocks: [{ kind: "lines", lines: [[span(change.message, "success")]] }],
+      }
+    : print(error(change.message));
+}
+
+function plugins({ args }: CommandInput, { data, settings, registry }: CommandContext): CommandEffect {
+  const [action, name] = args;
+  if (action === undefined) {
+    return print(
+      { kind: "heading", text: "Plugins", meta: skillSummary(registry, data, settings) },
+      {
+        kind: "table",
+        rows: data.manifest.plugins.map((plugin) => {
+          const enabled = isPluginEnabled(settings, plugin.name);
+          const count = registry.all.filter((command) => command.plugin === plugin.name).length;
+          return [
+            [span(enabled ? "●" : "○", enabled ? "success" : "faint")],
+            [span(plugin.name, "text", true), span(plugin.removable ? "" : " (always on)", "faint")],
+            [span(`${count} skill${count === 1 ? "" : "s"} · ${plugin.summary}`, "muted")],
+          ];
+        }),
+      },
+      hint("/plugins enable <name> or /plugins disable <name>"),
+    );
+  }
+  const verb = action.toLowerCase();
+  if ((verb !== "enable" && verb !== "disable") || name === undefined) {
+    return print(error("Usage: /plugins enable <name> or /plugins disable <name>"));
+  }
+  const change = changePlugin(settings, data.manifest, name, verb === "enable");
+  return change.ok
+    ? {
+        kind: "settings",
+        settings: change.settings,
+        blocks: [{ kind: "lines", lines: [[span(change.message, "success")]] }],
+      }
+    : print(error(change.message));
+}
+
+function neofetch(_input: CommandInput, { data, now }: CommandContext): CommandEffect {
+  const { profile } = data;
+  const current = profile.experience.find(isCurrent) ?? profile.experience[0];
+  const initials = data.ownerName
+    .split(/\s+/)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
+  const languages = Object.values(profile.skills_by_category)[0] ?? [];
+  const codeforces = data.codeforces[0];
+  const leetcode = data.leetcode[0];
+  return print(
+    { kind: "heading", text: `${data.ownerName.split(" ")[0]?.toLowerCase() ?? "me"}@portfolio` },
+    {
+      kind: "table",
+      rows: [
+        [
+          [span(`╭───╮`, "accent")],
+          [span("OS", "faint")],
+          [span("Software engineer, backend and distributed systems")],
+        ],
+        [
+          [span(`│${initials.padEnd(3).slice(0, 3)}│`, "accent")],
+          [span("Role", "faint")],
+          [span(current === undefined ? "—" : `${current.title} at ${current.company}`)],
+        ],
+        [
+          [span("╰───╯", "accent")],
+          [span("Uptime", "faint")],
+          [span(current === undefined ? "—" : experienceDuration(current, now))],
+        ],
+        [[span("")], [span("Languages", "faint")], [span(languages.slice(0, 6).join(", "))]],
+        [[span("")], [span("Projects", "faint")], [span(String(profile.projects.length))]],
+        [
+          [span("")],
+          [span("Codeforces", "faint")],
+          [
+            span(
+              codeforces?.current_rating === null || codeforces === undefined ? "—" : String(codeforces.current_rating),
+            ),
+          ],
+        ],
+        [
+          [span("")],
+          [span("LeetCode", "faint")],
+          [span(leetcode?.total_solved === null || leetcode === undefined ? "—" : `${leetcode.total_solved} solved`)],
+        ],
+      ],
+    },
+  );
+}
+
+function fortune(_input: CommandInput, { data, random }: CommandContext): CommandEffect {
+  const fortunes = data.manifest.fortunes;
+  const pick = fortunes[Math.floor(random() * fortunes.length)];
+  return pick === undefined
+    ? print(hint("No fortunes today."))
+    : print({ kind: "lines", lines: [[span(`“${pick}”`)]] });
 }
 
 function whoami(_input: CommandInput, { data, now }: CommandContext): CommandEffect {
@@ -344,151 +490,80 @@ function goBack(): CommandEffect {
   };
 }
 
-export const COMMANDS: readonly Command[] = [
-  {
-    name: "help",
-    aliases: ["?", "commands"],
-    usage: "/help",
-    summary: "list commands and shortcuts",
-    group: "Session",
-    run: help,
-  },
-  {
-    name: "whoami",
-    aliases: ["about", "me"],
-    usage: "/whoami",
-    summary: "the one-screen summary",
-    group: "Explore",
-    run: whoami,
-  },
-  {
-    name: "experience",
-    aliases: ["exp", "work", "jobs"],
-    usage: "/experience [company]",
-    summary: "roles, or one role in detail",
-    group: "Explore",
-    argOptions: companies,
-    run: experience,
-  },
-  {
-    name: "projects",
-    aliases: ["project", "proj", "ls"],
-    usage: "/projects [name]",
-    summary: "everything shipped, or one project",
-    group: "Explore",
-    argOptions: (data) => data.profile.projects.map((project) => project.name),
-    run: projects,
-  },
-  {
-    name: "skills",
-    aliases: ["stack", "tech"],
-    usage: "/skills [area]",
-    summary: "skills by area",
-    group: "Explore",
-    argOptions: (data) => Object.keys(data.profile.skills_by_category),
-    run: skills,
-  },
-  {
-    name: "education",
-    aliases: ["edu"],
-    usage: "/education",
-    summary: "degrees and grades",
-    group: "Explore",
-    run: education,
-  },
-  {
-    name: "achievements",
-    aliases: ["awards"],
-    usage: "/achievements",
-    summary: "highlights and wins",
-    group: "Explore",
-    run: achievements,
-  },
-  {
-    name: "stats",
-    aliases: ["ratings", "cp"],
-    usage: "/stats [platform]",
-    summary: "live LeetCode, Codeforces and GitHub numbers",
-    group: "Explore",
-    argOptions: () => STATS_TARGETS,
-    run: stats,
-  },
-  {
-    name: "resume",
-    aliases: ["cv", "résumé"],
-    usage: "/resume",
-    summary: "open the résumé PDF",
-    group: "Explore",
-    run: resume,
-  },
-  {
-    name: "contact",
-    aliases: ["socials", "links"],
-    usage: "/contact [mail]",
-    summary: "email and profiles",
-    group: "Explore",
-    argOptions: () => ["mail"],
-    run: contact,
-  },
-  {
-    name: "ask",
-    aliases: ["ai"],
-    usage: "/ask <question>",
-    summary: "ask the agent (plain text works too)",
-    group: "AI",
-    run: ask,
-  },
-  {
-    name: "history",
-    aliases: ["chats"],
-    usage: "/history",
-    summary: "your conversations (CLI and chat)",
-    group: "AI",
-    run: () => ({ kind: "list-chats" }),
-  },
-  {
-    name: "open",
-    aliases: ["resume-chat"],
-    usage: "/open <n>",
-    summary: "continue a conversation from /history",
-    group: "AI",
-    run: openChat,
-  },
-  {
-    name: "new",
-    aliases: ["reset"],
-    usage: "/new",
-    summary: "start a fresh conversation",
-    group: "AI",
-    run: () => ({ kind: "new-chat" }),
-  },
-  {
-    name: "clear",
-    aliases: ["cls"],
-    usage: "/clear",
-    summary: "clear the screen",
-    group: "Session",
-    run: () => ({ kind: "clear" }),
-  },
-  {
-    name: "go-back",
-    aliases: ["exit", "quit", "home", "back", "q"],
-    usage: "/go-back",
-    summary: "return to the portfolio",
-    group: "Session",
-    run: goBack,
-  },
-];
+const EXECUTORS: Readonly<Record<string, Executor>> = {
+  help,
+  whoami,
+  config,
+  plugins,
+  clear: () => ({ kind: "clear" }),
+  "go-back": goBack,
+  experience,
+  projects,
+  skills,
+  education,
+  achievements,
+  resume,
+  contact,
+  stats,
+  ask,
+  history: () => ({ kind: "list-chats" }),
+  open: openChat,
+  new: () => ({ kind: "new-chat" }),
+  neofetch,
+  fortune,
+};
 
-export function findCommand(name: string): Command | undefined {
-  const wanted = name.toLowerCase();
-  return COMMANDS.find((command) => command.name === wanted || command.aliases.includes(wanted));
+const ARG_SOURCES: Readonly<Record<CliArgSource, (data: CliData) => readonly string[]>> = {
+  none: () => [],
+  companies,
+  projects: (data) => data.profile.projects.map((project) => project.name),
+  skillAreas: (data) => Object.keys(data.profile.skills_by_category),
+  platforms: () => STATS_TARGETS,
+  mail: () => ["mail"],
+  settings: (data) =>
+    data.manifest.settings.flatMap((setting) => setting.options.map((option) => `${setting.key} ${option}`)),
+  plugins: (data) =>
+    data.manifest.plugins.flatMap((plugin) =>
+      plugin.removable ? [`enable ${plugin.name}`, `disable ${plugin.name}`] : [`enable ${plugin.name}`],
+    ),
+};
+
+export function executorNames(): readonly string[] {
+  return Object.keys(EXECUTORS);
 }
 
-export function closestCommand(name: string): Command | undefined {
+export function buildRegistry(manifest: CliManifest, settings: CliSettings): Registry {
+  const all = manifest.skills.flatMap((skill): Command[] => {
+    const run = EXECUTORS[skill.name];
+    if (run === undefined) {
+      return [];
+    }
+    return [
+      {
+        name: skill.name,
+        aliases: skill.aliases,
+        usage: skill.usage,
+        summary: skill.summary,
+        group: skill.group,
+        plugin: skill.plugin,
+        enabled: isPluginEnabled(settings, skill.plugin),
+        argOptions: skill.arg_source === "none" ? undefined : ARG_SOURCES[skill.arg_source],
+        run,
+      },
+    ];
+  });
+  return { all, commands: all.filter((command) => command.enabled) };
+}
+
+export function findCommand(registry: Registry, name: string): Command | undefined {
+  const wanted = name.toLowerCase();
+  return registry.all.find((command) => command.name === wanted || command.aliases.includes(wanted));
+}
+
+export function closestCommand(registry: Registry, name: string): Command | undefined {
   const wanted = name.toLowerCase();
   let best: { readonly command: Command; readonly distance: number } | undefined;
-  for (const command of COMMANDS) {
+  for (const command of registry.commands) {
     for (const candidate of [command.name, ...command.aliases]) {
       const distance = editDistance(wanted, candidate);
       if (distance <= 2 && (best === undefined || distance < best.distance)) {
@@ -513,14 +588,20 @@ export function editDistance(left: string, right: string): number {
 }
 
 export function runCommand(name: string, input: CommandInput, context: CommandContext): CommandEffect {
-  const command = findCommand(name);
-  if (command !== undefined) {
+  const command = findCommand(context.registry, name);
+  if (command?.enabled === true) {
     return command.run(input, context);
   }
-  const closest = closestCommand(name);
+  if (command !== undefined) {
+    return print(
+      error(`/${command.name} is part of the ${command.plugin} plugin, which is off.`),
+      hint(`Turn it on with /plugins enable ${command.plugin}`),
+    );
+  }
+  const closest = closestCommand(context.registry, name);
   return print(
     error(`Unknown command /${name}.`),
-    hint(closest === undefined ? "Type /help to see every command." : `Did you mean ${closest.usage}?`),
+    hint(closest === undefined ? "Type /help to see every skill." : `Did you mean ${closest.usage}?`),
   );
 }
 

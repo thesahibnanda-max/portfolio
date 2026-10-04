@@ -1,4 +1,4 @@
-import { streamAgentMessage, streamChatMessage } from "./chatStream";
+import { type AgentOptions, streamAgentMessage, streamChatMessage } from "./chatStream";
 import type { ApiClient } from "./client";
 import { type Chat, type ChatOrigin, type ChatSummary, chatListSchema, chatSchema, chatSummarySchema } from "./schemas";
 import type { SessionStore } from "./session";
@@ -56,9 +56,9 @@ export class ChatApi {
     return streamChatMessage(this.#client, session.session_id, chatId, message, signal);
   }
 
-  async streamAgentMessage(chatId: string, message: string, signal?: AbortSignal) {
+  async streamAgentMessage(chatId: string, message: string, signal?: AbortSignal, options?: AgentOptions) {
     const session = await this.#sessions.ensure();
-    return streamAgentMessage(this.#client, session.session_id, chatId, message, signal);
+    return streamAgentMessage(this.#client, session.session_id, chatId, message, signal, options);
   }
 
   async renewSession(): Promise<void> {

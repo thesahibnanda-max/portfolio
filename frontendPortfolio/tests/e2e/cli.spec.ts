@@ -36,8 +36,9 @@ test("a bare slash lists every command and Tab then Enter runs the overview", as
 
   await input.fill("/");
   const options = page.getByRole("listbox", { name: "Suggestions" }).getByRole("option");
-  await expect(options).toHaveCount(16);
-  await expect(options.last()).toContainText("/go-back");
+  await expect(options).toHaveCount(18);
+  await expect(options.filter({ hasText: "/go-back" })).toHaveCount(1);
+  await expect(options.filter({ hasText: "/config" })).toHaveCount(1);
 
   await input.fill("/ex");
   await page.keyboard.press("Tab");
@@ -166,7 +167,9 @@ test("/go-back returns to the portfolio", async ({ page }) => {
 
 test("fits the screen without horizontal scrolling", async ({ page }) => {
   await openCli(page);
-  for (const command of ["/stats", "/experience", "/projects", "/skills"]) {
+  await type(page, "/stats");
+  await expect(log(page)).toContainText("Codeforces · shisukenohara");
+  for (const command of ["/experience", "/projects", "/skills"]) {
     await type(page, command);
   }
   await expect(log(page)).toContainText("Distributed Systems");
@@ -176,4 +179,116 @@ test("fits the screen without horizontal scrolling", async ({ page }) => {
     await page.getByRole("navigation", { name: "Quick commands" }).getByRole("button", { name: "/resume" }).click();
     await expect(log(page)).toContainText("Opening the résumé");
   }
+});
+
+test("/config changes settings from the keyboard and they reach the agent", async ({ page, isMobile }) => {
+  test.skip(isMobile, "keyboard panel; touch uses tap");
+  const api = await openCli(page);
+
+  await type(page, "/config");
+  const panel = page.getByRole("listbox", { name: "Settings" });
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(panel.getByRole("option", { selected: true })).toContainText("detailed");
+  await page.keyboard.press("Escape");
+  await expect(log(page)).toContainText("Settings saved for this browser.");
+
+  await type(page, "/config accent blue");
+  await expect(log(page)).toContainText("Accent colour set to blue.");
+  expect(
+    await page.locator("[data-terminal]").evaluate((element) => element.style.getPropertyValue("--color-accent")),
+  ).toBe("#60a5fa");
+
+  await type(page, "who is he?");
+  await expect(log(page)).toContainText(/1 AI call/);
+  expect(api.agentBodies.at(-1)).toMatchObject({ style: "detailed", mode: "answer" });
+});
+
+test("plugins add and remove skills", async ({ page }) => {
+  await openCli(page);
+
+  await type(page, "/plugins disable stats");
+  await expect(log(page)).toContainText("Plugin stats disabled.");
+  await page.locator("#term-input").fill("/st");
+  await expect(page.getByRole("listbox", { name: "Suggestions" }).getByRole("option")).not.toContainText(["/stats"]);
+  await type(page, "/stats");
+  await expect(log(page)).toContainText("part of the stats plugin, which is off");
+
+  await type(page, "/plugins enable extras");
+  await type(page, "/neofetch");
+  await expect(log(page)).toContainText("sahib@portfolio");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBe(0);
+});
+
+test("Shift+Tab cycles default, auto-run and plan modes", async ({ page, isMobile }) => {
+  test.skip(isMobile, "keyboard shortcut; phones use the mode chip");
+  await openCli(page);
+  const indicator = page.locator("[data-mode-indicator]");
+
+  await page.keyboard.press("Shift+Tab");
+  await expect(indicator).toContainText("⏵⏵ auto-run on");
+  await page.keyboard.press("Shift+Tab");
+  await expect(indicator).toContainText("⏸ plan mode on");
+  await page.keyboard.press("Shift+Tab");
+  await expect(indicator).toHaveCount(0);
+});
+
+test("plan mode shows the plan and runs it on Enter", async ({ page, isMobile }) => {
+  test.skip(isMobile, "keyboard flow");
+  const api = await openCli(page);
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Shift+Tab");
+
+  await type(page, "show me his backend work");
+
+  await expect(log(page)).toContainText("Plan(terminal commands)");
+  await expect(log(page).locator("[data-plan]")).toContainText("/projects relay");
+  await expect(page.locator("[data-plan-prompt]")).toBeVisible();
+  expect(api.agentBodies.at(-1)).toMatchObject({ mode: "plan" });
+
+  await page.keyboard.press("Enter");
+  await expect(log(page)).toContainText("You typed: /projects relay");
+  await expect(log(page)).toContainText("You typed: /experience cred");
+  await expect(log(page)).toContainText("Relay - Multi-Agent Collaboration for AI Coding CLIs");
+  await expect(page.locator("[data-plan-prompt]")).toHaveCount(0);
+});
+
+test("plan mode can be cancelled with Escape", async ({ page, isMobile }) => {
+  test.skip(isMobile, "keyboard flow");
+  await openCli(page);
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Shift+Tab");
+  await type(page, "show me his backend work");
+  await expect(page.locator("[data-plan-prompt]")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+
+  await expect(log(page)).toContainText("Plan cancelled.");
+  await expect(log(page)).not.toContainText("You typed: /projects relay");
+});
+
+test("auto-run mode runs the plan straight away", async ({ page }) => {
+  await openCli(page);
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await page.locator("[data-mode-chip]").click();
+    await expect(page.locator("[data-mode-chip]")).toHaveText("mode: auto-run");
+  } else {
+    await page.keyboard.press("Shift+Tab");
+  }
+
+  await type(page, "show me his backend work");
+
+  await expect(log(page)).toContainText("You typed: /experience cred");
+  await expect(log(page)).toContainText("Relay - Multi-Agent Collaboration for AI Coding CLIs");
+});
+
+test("questions about the terminal itself go to the agent", async ({ page }) => {
+  const api = await openCli(page, { agentAnswer: "There are **20 skills** in 5 plugins." });
+
+  await type(page, "how many skills are in this cli?");
+
+  await expect(log(page).locator("strong", { hasText: "20 skills" })).toBeVisible();
+  expect(api.agentBodies.at(-1)).toMatchObject({ message: "how many skills are in this cli?", mode: "answer" });
+  await expect(log(page)).toContainText("18 of 20 skills on");
 });

@@ -1,4 +1,11 @@
-import type { CodeforcesAccount, GitHubAccount, LeetcodeAccount, Professional, Profile } from "../api/schemas";
+import type {
+  CliManifest,
+  CodeforcesAccount,
+  GitHubAccount,
+  LeetcodeAccount,
+  Professional,
+  Profile,
+} from "../api/schemas";
 
 export type LeetcodeSummary = Pick<
   LeetcodeAccount,
@@ -26,6 +33,7 @@ export interface CliData extends LiveStats {
   readonly professional: Professional;
   readonly resumeUrl: string;
   readonly builtAt: string;
+  readonly manifest: CliManifest;
 }
 
 export function summarizeLeetcode(account: LeetcodeAccount): LeetcodeSummary {

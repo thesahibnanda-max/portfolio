@@ -220,3 +220,57 @@ export const streamStepSchema = z.object({ label: z.string().min(1).max(200) });
 
 export const contactResponseSchema = z.object({ status: z.literal("SENT"), reply_to: z.string(), sent_at: z.string() });
 export type ContactResponse = z.infer<typeof contactResponseSchema>;
+
+export const cliPluginSchema = z.object({
+  name: z.string().min(1),
+  summary: z.string(),
+  enabled_by_default: z.boolean(),
+  removable: z.boolean(),
+});
+export type CliPlugin = z.infer<typeof cliPluginSchema>;
+
+export const cliArgSourceSchema = z.enum([
+  "none",
+  "companies",
+  "projects",
+  "skillAreas",
+  "platforms",
+  "mail",
+  "settings",
+  "plugins",
+]);
+export type CliArgSource = z.infer<typeof cliArgSourceSchema>;
+
+export const cliSkillSchema = z.object({
+  name: z.string().min(1),
+  aliases: z.array(z.string()),
+  usage: z.string(),
+  summary: z.string(),
+  group: z.enum(["Explore", "AI", "Session"]),
+  plugin: z.string(),
+  arg_source: cliArgSourceSchema,
+});
+export type CliSkill = z.infer<typeof cliSkillSchema>;
+
+export const cliSettingSchema = z.object({
+  key: z.string().min(1),
+  label: z.string(),
+  summary: z.string(),
+  options: z.array(z.string()).min(2),
+  default: z.string(),
+});
+export type CliSetting = z.infer<typeof cliSettingSchema>;
+
+export const cliManifestSchema = z.object({
+  plugins: z.array(cliPluginSchema).min(1),
+  skills: z.array(cliSkillSchema).min(1),
+  settings: z.array(cliSettingSchema),
+  fortunes: z.array(z.string()),
+});
+export type CliManifest = z.infer<typeof cliManifestSchema>;
+
+export const streamPlanSchema = z.object({
+  summary: z.string(),
+  steps: z.array(z.object({ command: z.string().startsWith("/"), reason: z.string() })).max(5),
+});
+export type StreamPlan = z.infer<typeof streamPlanSchema>;
