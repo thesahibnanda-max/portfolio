@@ -1,15 +1,29 @@
 from collections.abc import Callable
 from types import TracebackType
-from typing import Self
+from typing import Protocol, Self
 
 from main.package.clients.groq import (
-    GroqChatCompletionStream,
     GroqStreamCancelledError,
     GroqStreamEnd,
+    GroqStreamEvent,
     GroqTextDelta,
 )
 from main.package.service.chat.dto import ChatDoneEvent, ChatReply, ChatStreamEvent, ChatTokenEvent
 from main.package.service.chat.exceptions import ChatStreamCancelledError, ChatStreamStateError
+
+
+class AnswerStream(Protocol):
+    def __enter__(self) -> Self:
+        ...
+
+    def __next__(self) -> GroqStreamEvent:
+        ...
+
+    def cancel(self) -> None:
+        ...
+
+    def close(self) -> None:
+        ...
 
 
 class ChatReplyStream:
@@ -17,7 +31,7 @@ class ChatReplyStream:
         self,
         *,
         complete: Callable[[str], ChatReply],
-        answer_stream: GroqChatCompletionStream | None = None,
+        answer_stream: AnswerStream | None = None,
         fallback_answer: str | None = None,
     ) -> None:
         if (answer_stream is None) == (fallback_answer is None):

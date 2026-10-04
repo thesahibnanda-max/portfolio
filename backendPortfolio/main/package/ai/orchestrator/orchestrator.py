@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
-from main.package.ai.common.dto import ChatMessage, ContextType, ModelChoice
+from main.package.ai.common.dto import ChatMessage, ContextType, ModelChoice, Surface
 from main.package.ai.common.model_selector import ModelSelector
 from main.package.ai.common.prompting import build_prompt_environment, first_choice_content, require_conversation
 from main.package.ai.orchestrator.dto import OrchestratorDecision, QueryScope
@@ -102,13 +102,15 @@ class Orchestrator:
     def system_prompt(self) -> str:
         return self._system_prompt
 
-    def build_user_prompt(self, message: str, history: Sequence[ChatMessage] = ()) -> str:
+    def build_user_prompt(self, message: str, history: Sequence[ChatMessage] = (), surface: Surface = Surface.CHAT) -> str:
         checked_history = require_conversation(message, history, InvalidOrchestratorInputError)
+        if not isinstance(surface, Surface):
+            raise InvalidOrchestratorInputError("surface must be a Surface")
 
-        return self._user_template.render(current_message=message, history=checked_history)
+        return self._user_template.render(current_message=message, history=checked_history, surface=surface)
 
-    def route(self, message: str, history: Sequence[ChatMessage] = ()) -> OrchestratorDecision:
-        user_prompt = self.build_user_prompt(message, history)
+    def route(self, message: str, history: Sequence[ChatMessage] = (), surface: Surface = Surface.CHAT) -> OrchestratorDecision:
+        user_prompt = self.build_user_prompt(message, history, surface)
         choice = self._model_selector.select(temperature=self._temperature, top_p=self._top_p)
         request = GroqChatCompletionRequest(
             model=choice.model_id,

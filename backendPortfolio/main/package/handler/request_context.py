@@ -7,9 +7,11 @@ from fastapi import Depends, Header
 from starlette.requests import Request
 
 from main.package.handler.container import ServiceContainer
-from main.package.handler.dto import SendMessageRequest
+from main.package.ai.agent import AgentMode, AnswerStyle
+from main.package.handler.dto import AgentMessageRequest, SendMessageRequest
 from main.package.handler.exception_handler import ExceptionHandler
 from main.package.handler.responder import Responder
+from main.package.service.agent import AgentTurnStream
 from main.package.service.chat import ChatReplyStream
 
 SESSION_HEADER = "X-Session-Id"
@@ -50,6 +52,9 @@ class RateLimitGuard:
         self._api = api
 
     async def __call__(self, request: Request) -> None:
+        self.check(request)
+
+    def check(self, request: Request) -> None:
         state = handler_state(request)
         state.container.rate_limiter.check(
             self._api,
@@ -77,3 +82,32 @@ class ChatStreamOpener:
                 yield stream
             finally:
                 stream.cancel()
+
+
+class AgentStreamOpener:
+    def __init__(self, rate_limit_api: str) -> None:
+        self._rate_limit = RateLimitGuard(rate_limit_api)
+
+    def __call__(
+        self,
+        request: Request,
+        chat_id: str,
+        body: AgentMessageRequest,
+        session_id: SessionId,
+        state: State,
+    ) -> Iterator[AgentTurnStream]:
+        service = state.container.agent_service
+        service.validate(body.message)
+        self._rate_limit.check(request)
+        turn = service.stream_message(
+            session_id,
+            chat_id,
+            body.message,
+            style=AnswerStyle(body.style),
+            mode=AgentMode(body.mode),
+        )
+        with turn.replies:
+            try:
+                yield turn
+            finally:
+                turn.replies.cancel()

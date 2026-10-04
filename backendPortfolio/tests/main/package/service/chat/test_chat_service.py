@@ -13,7 +13,7 @@ from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import Orchestrator, QueryScope
 from main.package.ai.worker import Worker
 from main.package.clients.groq import GroqHTTPStatusError, GroqRequestError, GroqStreamIncompleteError
-from main.package.repository import ChatNotFoundError, NewMessage, SqliteChatRepository
+from main.package.repository import ChatNotFoundError, ChatOrigin, NewMessage, SqliteChatRepository
 from main.package.service.chat import (
     ChatDoneEvent,
     ChatFullError,
@@ -157,7 +157,7 @@ def test_in_scope_message_is_answered_with_context_and_saved(harness: Harness) -
     assert harness.stored_messages() == [("user", "What is his Codeforces rating?"), ("assistant", "He has a 1832 rating.")]
     assert [message.content for message in reply.chat.messages] == ["What is his Codeforces rating?", "He has a 1832 rating."]
     prompt = harness.worker_prompt()
-    assert prompt.startswith("Context:\nCODEFORCES (shisukenohara): current rating 1832")
+    assert prompt.startswith("Surface: chat panel on the portfolio home page\n\nContext:\nCODEFORCES (shisukenohara): current rating 1832")
     assert prompt.endswith("Current message:\nWhat is his Codeforces rating?")
 
 
@@ -167,7 +167,7 @@ def test_in_scope_without_data_skips_the_data_service(harness: Harness) -> None:
 
     assert reply.required_contexts == (ContextType.NONE,)
     assert harness.upstream.request_count() == 0
-    assert harness.worker_prompt() == "Current message:\nhi"
+    assert harness.worker_prompt() == "Surface: chat panel on the portfolio home page\n\nCurrent message:\nhi"
 
 
 def test_history_is_sent_to_both_ais(harness: Harness) -> None:
@@ -179,9 +179,21 @@ def test_history_is_sent_to_both_ais(harness: Harness) -> None:
     _send(harness.service(), harness, "And his rating?")
 
     orchestrator_prompt = json.loads(harness.orchestrator_transport.last_request.content)["messages"][1]["content"]
-    expected = "Conversation so far:\nUSER: Who is he?\nASSISTANT: A backend engineer.\n\nCurrent message:\nAnd his rating?"
+    expected = (
+        "Surface: chat panel on the portfolio home page\n\n"
+        "Conversation so far:\nUSER: Who is he?\nASSISTANT: A backend engineer.\n\nCurrent message:\nAnd his rating?"
+    )
     assert orchestrator_prompt == expected
-    assert harness.worker_prompt().endswith(expected)
+    assert harness.worker_prompt().endswith(expected.removeprefix("Surface: chat panel on the portfolio home page\n\n"))
+
+
+def test_cli_chats_tell_both_ais_their_surface(harness: Harness) -> None:
+    cli_chat = harness.repository.create_chat(harness.session.session_id, "Terminal", ChatOrigin.CLI)
+    harness.service().send_message(harness.session.session_id, cli_chat.chat_id, "What is his rating?")
+
+    orchestrator_prompt = json.loads(harness.orchestrator_transport.last_request.content)["messages"][1]["content"]
+    assert orchestrator_prompt.startswith("Surface: Portfolio Agent CLI terminal at /cli\n")
+    assert harness.worker_prompt().startswith("Surface: Portfolio Agent CLI terminal at /cli\n")
 
 
 @pytest.mark.parametrize("scope", [QueryScope.NOT_RELATED_TO_PORTFOLIO, QueryScope.PROMPT_INJECTION, QueryScope.UNSAFE])

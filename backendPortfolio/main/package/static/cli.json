@@ -1,0 +1,39 @@
+{
+  "plugins": [
+    { "name": "core", "summary": "help, settings, plugins and navigation", "enabledByDefault": true, "removable": false },
+    { "name": "portfolio", "summary": "experience, projects, skills, education, achievements, résumé and contact", "enabledByDefault": true, "removable": true },
+    { "name": "stats", "summary": "live LeetCode, Codeforces and GitHub numbers", "enabledByDefault": true, "removable": true },
+    { "name": "agent", "summary": "the AI agent and saved conversations", "enabledByDefault": true, "removable": true },
+    { "name": "extras", "summary": "a neofetch card and engineering fortunes", "enabledByDefault": false, "removable": true }
+  ],
+  "skills": [
+    { "name": "help", "aliases": ["?", "commands"], "usage": "/help", "summary": "list skills and shortcuts", "group": "Session", "plugin": "core", "argSource": "none" },
+    { "name": "whoami", "aliases": ["about", "me"], "usage": "/whoami", "summary": "the one-screen summary", "group": "Explore", "plugin": "core", "argSource": "none" },
+    { "name": "config", "aliases": ["settings"], "usage": "/config [key value]", "summary": "change terminal settings", "group": "Session", "plugin": "core", "argSource": "settings" },
+    { "name": "plugins", "aliases": ["plugin"], "usage": "/plugins [enable|disable name]", "summary": "turn plugins on or off", "group": "Session", "plugin": "core", "argSource": "plugins" },
+    { "name": "clear", "aliases": ["cls"], "usage": "/clear", "summary": "clear the screen", "group": "Session", "plugin": "core", "argSource": "none" },
+    { "name": "go-back", "aliases": ["exit", "quit", "home", "back", "q"], "usage": "/go-back", "summary": "return to the portfolio", "group": "Session", "plugin": "core", "argSource": "none" },
+    { "name": "experience", "aliases": ["exp", "work", "jobs"], "usage": "/experience [company]", "summary": "roles, or one company in detail", "group": "Explore", "plugin": "portfolio", "argSource": "companies" },
+    { "name": "projects", "aliases": ["project", "proj", "ls"], "usage": "/projects [name]", "summary": "everything shipped, or one project", "group": "Explore", "plugin": "portfolio", "argSource": "projects" },
+    { "name": "skills", "aliases": ["stack", "tech"], "usage": "/skills [area]", "summary": "technical skills by area", "group": "Explore", "plugin": "portfolio", "argSource": "skillAreas" },
+    { "name": "education", "aliases": ["edu"], "usage": "/education", "summary": "degrees and grades", "group": "Explore", "plugin": "portfolio", "argSource": "none" },
+    { "name": "achievements", "aliases": ["awards"], "usage": "/achievements", "summary": "highlights and wins", "group": "Explore", "plugin": "portfolio", "argSource": "none" },
+    { "name": "resume", "aliases": ["cv", "résumé"], "usage": "/resume", "summary": "open the résumé PDF", "group": "Explore", "plugin": "portfolio", "argSource": "none" },
+    { "name": "contact", "aliases": ["socials", "links"], "usage": "/contact [mail]", "summary": "email and profiles", "group": "Explore", "plugin": "portfolio", "argSource": "mail" },
+    { "name": "stats", "aliases": ["ratings", "cp"], "usage": "/stats [platform]", "summary": "live LeetCode, Codeforces and GitHub numbers", "group": "Explore", "plugin": "stats", "argSource": "platforms" },
+    { "name": "ask", "aliases": ["ai"], "usage": "/ask <question>", "summary": "ask the agent (plain text works too)", "group": "AI", "plugin": "agent", "argSource": "none" },
+    { "name": "history", "aliases": ["chats"], "usage": "/history", "summary": "your conversations (terminal and chat)", "group": "AI", "plugin": "agent", "argSource": "none" },
+    { "name": "open", "aliases": ["resume-chat"], "usage": "/open <n>", "summary": "continue a conversation from /history", "group": "AI", "plugin": "agent", "argSource": "none" },
+    { "name": "new", "aliases": ["reset"], "usage": "/new", "summary": "start a fresh conversation", "group": "AI", "plugin": "agent", "argSource": "none" },
+    { "name": "neofetch", "aliases": ["fetch", "card"], "usage": "/neofetch", "summary": "a neofetch-style card", "group": "Explore", "plugin": "extras", "argSource": "none" },
+    { "name": "fortune", "aliases": ["quote"], "usage": "/fortune", "summary": "an engineering one-liner", "group": "Explore", "plugin": "extras", "argSource": "none" }
+  ],
+  "settings": [
+    { "key": "mode", "label": "Mode", "summary": "default answers, auto-run plans and runs commands, plan proposes them first (Shift+Tab cycles)", "options": ["default", "auto-run", "plan"], "default": "default" },
+    { "key": "answers", "label": "Answer length", "summary": "concise or detailed AI answers", "options": ["concise", "detailed"], "default": "concise" },
+    { "key": "autocomplete", "label": "Autocomplete", "summary": "slash menu and grey completions", "options": ["on", "off"], "default": "on" },
+    { "key": "showCost", "label": "Show AI cost", "summary": "AI calls and time under each answer", "options": ["on", "off"], "default": "on" },
+    { "key": "accent", "label": "Accent colour", "summary": "the highlight colour", "options": ["amber", "blue", "green", "violet"], "default": "amber" },
+    { "key": "animations", "label": "Animations", "summary": "spinner and line animations", "options": ["on", "off"], "default": "on" }
+  ]
+}

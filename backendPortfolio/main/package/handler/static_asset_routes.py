@@ -12,6 +12,8 @@ from main.package.static.dto import Profile, StaticAsset
 PROFILE_IMAGE_PATH = "/details/profile/image"
 RESUME_PATH = "/details/resume"
 CACHE_CONTROL = "public, max-age=31536000, immutable"
+REVALIDATE_CACHE_CONTROL = "no-cache"
+VERSION_PARAMETER = "v"
 _WEAK_PREFIX = "W/"
 _UNSAFE_FILENAME_CHARACTERS = re.compile(r"[^A-Za-z0-9_-]+")
 
@@ -19,7 +21,7 @@ router = APIRouter(tags=["details"])
 
 
 def versioned_url(path: str, asset: StaticAsset) -> str:
-    return f"{path}?v={asset.etag}"
+    return f"{path}?{VERSION_PARAMETER}={asset.etag}"
 
 
 def resume_filename(profile: Profile) -> str:
@@ -40,7 +42,8 @@ def _matches(if_none_match: str | None, etag: str) -> bool:
 
 def _asset_response(request: Request, asset: StaticAsset, extra_headers: Mapping[str, str]) -> Response:
     etag = _quoted(asset.etag)
-    headers = {"ETag": etag, "Cache-Control": CACHE_CONTROL, **extra_headers}
+    versioned = request.query_params.get(VERSION_PARAMETER) == asset.etag
+    headers = {"ETag": etag, "Cache-Control": CACHE_CONTROL if versioned else REVALIDATE_CACHE_CONTROL, **extra_headers}
     if _matches(request.headers.get("if-none-match"), etag):
         return Response(status_code=HTTPStatus.NOT_MODIFIED, headers=headers)
     return Response(content=asset.content, media_type=asset.media_type, headers=headers)

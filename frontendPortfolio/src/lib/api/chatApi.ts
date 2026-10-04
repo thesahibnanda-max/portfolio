@@ -1,6 +1,6 @@
-import { streamChatMessage } from "./chatStream";
+import { type AgentOptions, streamAgentMessage, streamChatMessage } from "./chatStream";
 import type { ApiClient } from "./client";
-import { type Chat, type ChatSummary, chatListSchema, chatSchema, chatSummarySchema } from "./schemas";
+import { type Chat, type ChatOrigin, type ChatSummary, chatListSchema, chatSchema, chatSummarySchema } from "./schemas";
 import type { SessionStore } from "./session";
 
 export class ChatApi {
@@ -19,11 +19,11 @@ export class ChatApi {
     });
   }
 
-  createChat(title?: string): Promise<ChatSummary> {
+  createChat(title?: string, origin: ChatOrigin = "chat"): Promise<ChatSummary> {
     return this.#sessions.withSession((sessionId) =>
       this.#client.request("/chats", chatSummarySchema, {
         method: "POST",
-        body: title === undefined ? {} : { title },
+        body: title === undefined ? { origin } : { title, origin },
         sessionId,
       }),
     );
@@ -54,6 +54,11 @@ export class ChatApi {
   async streamMessage(chatId: string, message: string, signal?: AbortSignal) {
     const session = await this.#sessions.ensure();
     return streamChatMessage(this.#client, session.session_id, chatId, message, signal);
+  }
+
+  async streamAgentMessage(chatId: string, message: string, signal?: AbortSignal, options?: AgentOptions) {
+    const session = await this.#sessions.ensure();
+    return streamAgentMessage(this.#client, session.session_id, chatId, message, signal, options);
   }
 
   async renewSession(): Promise<void> {

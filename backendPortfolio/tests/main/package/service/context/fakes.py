@@ -7,6 +7,7 @@ from main.package.service.context import (
     LeetcodeContextProvider,
     PersonalityContextProvider,
     ProfileContextProvider,
+    SiteContextProvider,
 )
 from main.package.service.data import DataService
 from main.package.static import StaticLoader
@@ -71,6 +72,7 @@ def aggregator(service: DataService, *, max_repositories: int = 5, max_rating_ch
             GitHubContextProvider(service, max_repositories=max_repositories),
             LeetcodeContextProvider(service),
             CodeforcesContextProvider(service, max_rating_changes=max_rating_changes),
+            SiteContextProvider(loader),
         ],
         max_workers=5,
     )

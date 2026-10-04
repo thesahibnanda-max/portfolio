@@ -10,6 +10,9 @@ export interface MockOptions {
   readonly expireFirstSession?: boolean;
   readonly rateLimitStream?: boolean;
   readonly holdStream?: boolean;
+  readonly rateLimitAgent?: boolean;
+  readonly agentAnswer?: string;
+  readonly seedHistory?: boolean;
 }
 
 function envelope(data: unknown, status = 200) {
@@ -20,8 +23,48 @@ function session(id: string) {
   return { session_id: id, created_at: NOW, expires_at: "2099-01-01T00:00:00Z" };
 }
 
-function chat(id: string) {
-  return { chat_id: id, title: "What's his Codeforces peak rating?", created_at: NOW, updated_at: NOW };
+function chat(id: string, origin: "chat" | "cli" = "chat", title = "What's his Codeforces peak rating?") {
+  return { chat_id: id, title, created_at: NOW, updated_at: NOW, origin };
+}
+
+const PLAN = {
+  summary: "Shows his backend work",
+  steps: [
+    { command: "/projects relay", reason: "his flagship Go project" },
+    { command: "/experience cred", reason: "payments at scale" },
+  ],
+};
+
+function planBody(chatId: string): string {
+  const text = `Plan: ${PLAN.summary}\n1. /projects relay -- his flagship Go project\n2. /experience cred -- payments at scale`;
+  const reply = {
+    chat: { ...chat(chatId, "cli"), messages: [] },
+    answer: text,
+    scope: "IN_SCOPE",
+    required_contexts: ["SITE"],
+  };
+  return [
+    'event: step\ndata: {"label":"Planning terminal commands"}\n\n',
+    `event: plan\ndata: ${JSON.stringify(PLAN)}\n\n`,
+    `event: token\ndata: ${JSON.stringify({ text })}\n\n`,
+    `event: done\ndata: ${envelope(reply)}\n\n`,
+  ].join("");
+}
+
+function agentBody(chatId: string, answer: string): string {
+  const reply = {
+    chat: { ...chat(chatId, "cli"), messages: [] },
+    answer,
+    scope: "IN_SCOPE",
+    required_contexts: ["PROFILE"],
+  };
+  const middle = Math.ceil(answer.length / 2);
+  return [
+    'event: step\ndata: {"label":"Reading profile · github"}\n\n',
+    `event: token\ndata: ${JSON.stringify({ text: answer.slice(0, middle) })}\n\n`,
+    `event: token\ndata: ${JSON.stringify({ text: answer.slice(middle) })}\n\n`,
+    `event: done\ndata: ${envelope(reply)}\n\n`,
+  ].join("");
 }
 
 function streamBody(chatId: string): string {
@@ -42,6 +85,10 @@ export class MockApi {
   readonly sessionsCreated: string[] = [];
   readonly streamSessions: string[] = [];
   readonly contactBodies: unknown[] = [];
+  readonly createdChats: unknown[] = [];
+  readonly agentQuestions: string[] = [];
+  readonly agentBodies: { message: string; style?: string; mode?: string }[] = [];
+  readonly deletedChats: string[] = [];
   #releaseStream: (() => void) | null = null;
 
   constructor(private readonly options: MockOptions = {}) {}
@@ -70,11 +117,44 @@ export class MockApi {
       return;
     }
     if (url.pathname === "/chats" && request.method() === "POST") {
-      await json(route, 201, envelope(chat(`chat-for-${sessionId}`), 201));
+      const body = (request.postDataJSON() ?? {}) as { origin?: "chat" | "cli"; title?: string };
+      this.createdChats.push(body);
+      const prefix = body.origin === "cli" ? "cli-chat" : "chat";
+      await json(route, 201, envelope(chat(`${prefix}-for-${sessionId}`, body.origin ?? "chat", body.title), 201));
       return;
     }
     if (url.pathname === "/chats" && request.method() === "GET") {
-      await json(route, 200, envelope({ chats: [] }));
+      await json(
+        route,
+        200,
+        envelope({
+          chats:
+            this.createdChats.length === 0 && this.options.seedHistory !== true
+              ? []
+              : [
+                  chat(`cli-chat-for-${sessionId}`, "cli", "Earlier terminal chat"),
+                  chat("panel-chat", "chat", "Panel chat"),
+                ],
+        }),
+      );
+      return;
+    }
+    if (/^\/chats\/[^/]+$/.test(url.pathname) && request.method() === "DELETE") {
+      this.deletedChats.push(url.pathname.split("/")[2] ?? "");
+      await route.fulfill({ status: 204, headers: corsHeaders() });
+      return;
+    }
+    if (/^\/chats\/[^/]+$/.test(url.pathname) && request.method() === "GET") {
+      const id = url.pathname.split("/")[2] ?? "";
+      const messages = [
+        { message_id: 1, role: "user", content: "Who is he?", created_at: NOW },
+        { message_id: 2, role: "assistant", content: "A **backend** engineer.", created_at: NOW },
+      ];
+      await json(route, 200, envelope({ ...chat(id, "cli", "Earlier terminal chat"), messages }));
+      return;
+    }
+    if (url.pathname.endsWith("/agent/stream")) {
+      await this.#agentStream(route, url.pathname.split("/")[2] ?? "");
       return;
     }
     if (url.pathname.endsWith("/messages/stream")) {
@@ -129,6 +209,35 @@ export class MockApi {
     }
   }
 
+  async #agentStream(route: Route, chatId: string): Promise<void> {
+    const body = route.request().postDataJSON() as { message: string; style?: string; mode?: string };
+    this.agentQuestions.push(body.message);
+    this.agentBodies.push(body);
+    if (this.options.rateLimitAgent === true) {
+      await route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        headers: { ...corsHeaders(), "Retry-After": "42" },
+        body: errorBody(429, "RATE_LIMITED"),
+      });
+      return;
+    }
+    if (this.options.holdStream === true) {
+      await new Promise<void>((resolve) => {
+        this.#releaseStream = resolve;
+      });
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: corsHeaders(),
+      body:
+        body.mode === "plan"
+          ? planBody(chatId)
+          : agentBody(chatId, this.options.agentAnswer ?? "Sahib is a **backend engineer** who builds `Go` systems."),
+    });
+  }
+
   async #stream(route: Route, sessionId: string, chatId: string): Promise<void> {
     this.streamSessions.push(sessionId);
     if (this.options.expireFirstSession === true && sessionId === "session-1") {
@@ -173,4 +282,17 @@ function corsHeaders(): Record<string, string> {
 
 async function json(route: Route, status: number, body: string): Promise<void> {
   await route.fulfill({ status, contentType: "application/json", headers: corsHeaders(), body });
+}
+
+export async function seedSession(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "portfolio.session",
+      JSON.stringify({
+        session_id: "seeded-session",
+        created_at: "2026-10-02T00:00:00Z",
+        expires_at: "2099-01-01T00:00:00Z",
+      }),
+    );
+  });
 }

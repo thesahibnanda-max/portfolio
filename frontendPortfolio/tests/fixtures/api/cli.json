@@ -1,0 +1,272 @@
+{
+  "plugins": [
+    {
+      "name": "core",
+      "summary": "help, settings, plugins and navigation",
+      "enabled_by_default": true,
+      "removable": false
+    },
+    {
+      "name": "portfolio",
+      "summary": "experience, projects, skills, education, achievements, résumé and contact",
+      "enabled_by_default": true,
+      "removable": true
+    },
+    {
+      "name": "stats",
+      "summary": "live LeetCode, Codeforces and GitHub numbers",
+      "enabled_by_default": true,
+      "removable": true
+    },
+    {
+      "name": "agent",
+      "summary": "the AI agent and saved conversations",
+      "enabled_by_default": true,
+      "removable": true
+    },
+    {
+      "name": "extras",
+      "summary": "a neofetch card and engineering fortunes",
+      "enabled_by_default": false,
+      "removable": true
+    }
+  ],
+  "skills": [
+    {
+      "name": "help",
+      "aliases": ["?", "commands"],
+      "usage": "/help",
+      "summary": "list skills and shortcuts",
+      "group": "Session",
+      "plugin": "core",
+      "arg_source": "none"
+    },
+    {
+      "name": "whoami",
+      "aliases": ["about", "me"],
+      "usage": "/whoami",
+      "summary": "the one-screen summary",
+      "group": "Explore",
+      "plugin": "core",
+      "arg_source": "none"
+    },
+    {
+      "name": "config",
+      "aliases": ["settings"],
+      "usage": "/config [key value]",
+      "summary": "change terminal settings",
+      "group": "Session",
+      "plugin": "core",
+      "arg_source": "settings"
+    },
+    {
+      "name": "plugins",
+      "aliases": ["plugin"],
+      "usage": "/plugins [enable|disable name]",
+      "summary": "turn plugins on or off",
+      "group": "Session",
+      "plugin": "core",
+      "arg_source": "plugins"
+    },
+    {
+      "name": "clear",
+      "aliases": ["cls"],
+      "usage": "/clear",
+      "summary": "clear the screen",
+      "group": "Session",
+      "plugin": "core",
+      "arg_source": "none"
+    },
+    {
+      "name": "go-back",
+      "aliases": ["exit", "quit", "home", "back", "q"],
+      "usage": "/go-back",
+      "summary": "return to the portfolio",
+      "group": "Session",
+      "plugin": "core",
+      "arg_source": "none"
+    },
+    {
+      "name": "experience",
+      "aliases": ["exp", "work", "jobs"],
+      "usage": "/experience [company]",
+      "summary": "roles, or one company in detail",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "companies"
+    },
+    {
+      "name": "projects",
+      "aliases": ["project", "proj", "ls"],
+      "usage": "/projects [name]",
+      "summary": "everything shipped, or one project",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "projects"
+    },
+    {
+      "name": "skills",
+      "aliases": ["stack", "tech"],
+      "usage": "/skills [area]",
+      "summary": "technical skills by area",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "skillAreas"
+    },
+    {
+      "name": "education",
+      "aliases": ["edu"],
+      "usage": "/education",
+      "summary": "degrees and grades",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "none"
+    },
+    {
+      "name": "achievements",
+      "aliases": ["awards"],
+      "usage": "/achievements",
+      "summary": "highlights and wins",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "none"
+    },
+    {
+      "name": "resume",
+      "aliases": ["cv", "résumé"],
+      "usage": "/resume",
+      "summary": "open the résumé PDF",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "none"
+    },
+    {
+      "name": "contact",
+      "aliases": ["socials", "links"],
+      "usage": "/contact [mail]",
+      "summary": "email and profiles",
+      "group": "Explore",
+      "plugin": "portfolio",
+      "arg_source": "mail"
+    },
+    {
+      "name": "stats",
+      "aliases": ["ratings", "cp"],
+      "usage": "/stats [platform]",
+      "summary": "live LeetCode, Codeforces and GitHub numbers",
+      "group": "Explore",
+      "plugin": "stats",
+      "arg_source": "platforms"
+    },
+    {
+      "name": "ask",
+      "aliases": ["ai"],
+      "usage": "/ask <question>",
+      "summary": "ask the agent (plain text works too)",
+      "group": "AI",
+      "plugin": "agent",
+      "arg_source": "none"
+    },
+    {
+      "name": "history",
+      "aliases": ["chats"],
+      "usage": "/history",
+      "summary": "your conversations (terminal and chat)",
+      "group": "AI",
+      "plugin": "agent",
+      "arg_source": "none"
+    },
+    {
+      "name": "open",
+      "aliases": ["resume-chat"],
+      "usage": "/open <n>",
+      "summary": "continue a conversation from /history",
+      "group": "AI",
+      "plugin": "agent",
+      "arg_source": "none"
+    },
+    {
+      "name": "new",
+      "aliases": ["reset"],
+      "usage": "/new",
+      "summary": "start a fresh conversation",
+      "group": "AI",
+      "plugin": "agent",
+      "arg_source": "none"
+    },
+    {
+      "name": "neofetch",
+      "aliases": ["fetch", "card"],
+      "usage": "/neofetch",
+      "summary": "a neofetch-style card",
+      "group": "Explore",
+      "plugin": "extras",
+      "arg_source": "none"
+    },
+    {
+      "name": "fortune",
+      "aliases": ["quote"],
+      "usage": "/fortune",
+      "summary": "an engineering one-liner",
+      "group": "Explore",
+      "plugin": "extras",
+      "arg_source": "none"
+    }
+  ],
+  "settings": [
+    {
+      "key": "mode",
+      "label": "Mode",
+      "summary": "default answers, auto-run plans and runs commands, plan proposes them first (Shift+Tab cycles)",
+      "options": ["default", "auto-run", "plan"],
+      "default": "default"
+    },
+    {
+      "key": "answers",
+      "label": "Answer length",
+      "summary": "concise or detailed AI answers",
+      "options": ["concise", "detailed"],
+      "default": "concise"
+    },
+    {
+      "key": "autocomplete",
+      "label": "Autocomplete",
+      "summary": "slash menu and grey completions",
+      "options": ["on", "off"],
+      "default": "on"
+    },
+    {
+      "key": "showCost",
+      "label": "Show AI cost",
+      "summary": "AI calls and time under each answer",
+      "options": ["on", "off"],
+      "default": "on"
+    },
+    {
+      "key": "accent",
+      "label": "Accent colour",
+      "summary": "the highlight colour",
+      "options": ["amber", "blue", "green", "violet"],
+      "default": "amber"
+    },
+    {
+      "key": "animations",
+      "label": "Animations",
+      "summary": "spinner and line animations",
+      "options": ["on", "off"],
+      "default": "on"
+    }
+  ],
+  "fortunes": [
+    "Make it work, make it right, make it fast, in that order.",
+    "The fastest network call is the one you never make.",
+    "Idempotency is a gift you give your future on-call self.",
+    "Every queue is a promise that someone will eventually read it.",
+    "Logs tell you what happened; metrics tell you how often; traces tell you why.",
+    "A retry without a backoff is a denial-of-service attack you wrote yourself.",
+    "Cache invalidation is hard, so give every cache a TTL.",
+    "The best distributed lock is the one you designed away.",
+    "Measure twice, deploy once, and keep the rollback one command away.",
+    "Exactly-once delivery is at-least-once delivery plus idempotency."
+  ]
+}

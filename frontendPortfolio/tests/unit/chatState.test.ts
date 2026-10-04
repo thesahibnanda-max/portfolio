@@ -41,7 +41,7 @@ describe("chatReducer", () => {
     let state = chatReducer(initialChatState, { type: "chat-created", chatId: "c1" });
     state = chatReducer(state, {
       type: "history-loaded",
-      chats: [{ chat_id: "c1", title: "t", created_at: "x", updated_at: "x" }],
+      chats: [{ chat_id: "c1", title: "t", created_at: "x", updated_at: "x", origin: "chat" }],
     });
     state = chatReducer(state, { type: "chat-removed", chatId: "c1" });
     expect(state).toMatchObject({ chatId: null, history: [], messages: [] });

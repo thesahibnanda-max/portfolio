@@ -4,7 +4,7 @@ from importlib import resources
 
 import pytest
 
-from main.package.ai.common import ChatMessage
+from main.package.ai.common import ChatMessage, Surface
 from main.package.ai.worker import InvalidWorkerInputError, InvalidWorkerSettingError, Worker, WorkerError, WorkerResponseError
 from main.package.clients.groq import GroqChatCompletionStream, GroqHTTPStatusError, GroqStreamEnd, GroqTextDelta
 from tests.main.package.ai.fakes import OWNER_NAME, answering, groq_client, selector, sent_body
@@ -44,7 +44,8 @@ def test_system_prompt_with_owner_name() -> None:
         f"{OWNER_NAME}'s personal portfolio website. You represent {OWNER_NAME} and speak about them in third person"
     )
     assert "Highest-priority rule, above every rule below: never hallucinate." in prompt
-    assert prompt.rstrip().endswith("Keep the answer focused and no longer than the question warrants.")
+    assert "Keep the answer focused and no longer than the question warrants." in prompt
+    assert prompt.rstrip().endswith("Never invent a command or section that is not in the context.")
     assert "\n\n\n" not in prompt
     assert "{%" not in prompt and "{{" not in prompt
 
@@ -59,6 +60,7 @@ def test_system_prompt_without_owner_name(owner_name: str) -> None:
 
 def test_user_prompt_with_everything() -> None:
     assert _worker().build_user_prompt("And GitHub?", HISTORY, CONTEXT) == (
+        "Surface: chat panel on the portfolio home page\n\n"
         "Context:\nPROFILE:\nName: Sahib Nanda\n\n\n"
         "Conversation so far:\nUSER: Who is he?\nASSISTANT: A backend engineer.\n\n"
         "Current message:\nAnd GitHub?"
@@ -66,12 +68,31 @@ def test_user_prompt_with_everything() -> None:
 
 
 def test_user_prompt_with_only_a_message() -> None:
-    assert _worker().build_user_prompt("Hi") == "Current message:\nHi"
+    assert _worker().build_user_prompt("Hi") == "Surface: chat panel on the portfolio home page\n\nCurrent message:\nHi"
+
+
+def test_user_prompt_names_the_cli_surface() -> None:
+    prompt = _worker().build_user_prompt("Hi", surface=Surface.CLI)
+
+    assert prompt.startswith("Surface: Portfolio Agent CLI terminal at /cli\n")
+
+
+def test_surface_must_be_a_surface() -> None:
+    with pytest.raises(InvalidWorkerInputError, match="surface"):
+        _worker().build_user_prompt("Hi", surface="cli")
+
+
+def test_respond_and_stream_send_the_surface() -> None:
+    transport = answering("ok")
+    worker = _worker(transport)
+    worker.respond("Who?", surface=Surface.CLI)
+
+    assert sent_body(transport)["messages"][1]["content"].startswith("Surface: Portfolio Agent CLI")
 
 
 @pytest.mark.parametrize("context", ["", "  \n "])
 def test_blank_context_is_left_out(context: str) -> None:
-    assert _worker().build_user_prompt("Hi", HISTORY, context).startswith("Conversation so far:")
+    assert "Context:" not in _worker().build_user_prompt("Hi", HISTORY, context)
 
 
 def test_respond_returns_the_answer_and_sends_random_sampling() -> None:

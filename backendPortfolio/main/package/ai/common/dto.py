@@ -11,6 +11,7 @@ class ContextType(StrEnum):
     LEETCODE = "LEETCODE"
     CODEFORCES = "CODEFORCES"
     PERSONALITY = "PERSONALITY"
+    SITE = "SITE"
     NONE = "NONE"
 
     @property
@@ -35,7 +36,28 @@ _CONTEXT_DESCRIPTIONS = MappingProxyType(
             "favorites (movies, games, sports), personality traits, "
             "appearance, spoken languages, working style"
         ),
+        ContextType.SITE: (
+            "This portfolio website and its Portfolio Agent CLI terminal: its skills "
+            "(slash commands), plugins, /config settings, modes, the chat panel and how to use them"
+        ),
         ContextType.NONE: "General question requiring no personal context",
+    }
+)
+
+
+class Surface(StrEnum):
+    CHAT = "chat"
+    CLI = "cli"
+
+    @property
+    def label(self) -> str:
+        return _SURFACE_LABELS[self]
+
+
+_SURFACE_LABELS = MappingProxyType(
+    {
+        Surface.CHAT: "chat panel on the portfolio home page",
+        Surface.CLI: "Portfolio Agent CLI terminal at /cli",
     }
 )
 

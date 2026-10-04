@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS chats (
     session_id  TEXT NOT NULL REFERENCES sessions (session_id) ON DELETE CASCADE,
     title       TEXT NOT NULL,
     created_at  INTEGER NOT NULL,
-    updated_at  INTEGER NOT NULL
+    updated_at  INTEGER NOT NULL,
+    origin      TEXT NOT NULL DEFAULT 'chat' CHECK (origin IN ('chat', 'cli'))
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS idx_chats_session_updated ON chats (session_id, updated_at);

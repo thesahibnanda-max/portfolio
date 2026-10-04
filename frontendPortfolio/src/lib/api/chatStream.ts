@@ -2,12 +2,26 @@ import { EventSourceParserStream } from "eventsource-parser/stream";
 import type { z } from "zod";
 import type { ApiClient } from "./client";
 import { ApiError, InvalidResponseError } from "./errors";
-import { type ChatReply, chatReplySchema, envelopeSchema, errorResponseSchema, streamTokenSchema } from "./schemas";
+import {
+  type ChatReply,
+  chatReplySchema,
+  envelopeSchema,
+  errorResponseSchema,
+  type StreamPlan,
+  streamPlanSchema,
+  streamStepSchema,
+  streamTokenSchema,
+} from "./schemas";
 
 export type ChatStreamEvent =
   | { readonly type: "token"; readonly text: string }
   | { readonly type: "done"; readonly reply: ChatReply }
   | { readonly type: "error"; readonly error: ApiError };
+
+export type AgentStreamEvent =
+  | ChatStreamEvent
+  | { readonly type: "step"; readonly label: string }
+  | { readonly type: "plan"; readonly plan: StreamPlan };
 
 const doneSchema = envelopeSchema(chatReplySchema);
 
@@ -18,9 +32,51 @@ export async function* streamChatMessage(
   message: string,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent, void, undefined> {
-  const response = await client.send(`/chats/${encodeURIComponent(chatId)}/messages/stream`, {
+  for await (const event of streamEvents(
+    client,
+    `/chats/${encodeURIComponent(chatId)}/messages/stream`,
+    sessionId,
+    { message },
+    signal,
+  )) {
+    if (event.type !== "step" && event.type !== "plan") {
+      yield event;
+    }
+  }
+}
+
+export interface AgentOptions {
+  readonly style: "concise" | "detailed";
+  readonly mode: "answer" | "plan";
+}
+
+export function streamAgentMessage(
+  client: ApiClient,
+  sessionId: string,
+  chatId: string,
+  message: string,
+  signal?: AbortSignal,
+  options: AgentOptions = { style: "concise", mode: "answer" },
+): AsyncGenerator<AgentStreamEvent, void, undefined> {
+  return streamEvents(
+    client,
+    `/chats/${encodeURIComponent(chatId)}/agent/stream`,
+    sessionId,
+    { message, ...options },
+    signal,
+  );
+}
+
+async function* streamEvents(
+  client: ApiClient,
+  path: string,
+  sessionId: string,
+  body: Readonly<Record<string, string>>,
+  signal?: AbortSignal,
+): AsyncGenerator<AgentStreamEvent, void, undefined> {
+  const response = await client.send(path, {
     method: "POST",
-    body: { message },
+    body,
     sessionId,
     signal,
   });
@@ -36,7 +92,7 @@ export async function* streamChatMessage(
       continue;
     }
     yield parsed;
-    if (parsed.type !== "token") {
+    if (parsed.type === "done" || parsed.type === "error") {
       finished = true;
       break;
     }
@@ -47,9 +103,13 @@ export async function* streamChatMessage(
   }
 }
 
-export function toChatStreamEvent(name: string | undefined, data: string): ChatStreamEvent | null {
+export function toChatStreamEvent(name: string | undefined, data: string): AgentStreamEvent | null {
   const payload = parseJson(data);
   switch (name) {
+    case "step":
+      return { type: "step", label: validate(streamStepSchema, payload, name).label };
+    case "plan":
+      return { type: "plan", plan: validate(streamPlanSchema, payload, name) };
     case "token":
       return { type: "token", text: validate(streamTokenSchema, payload, name).text };
     case "done":

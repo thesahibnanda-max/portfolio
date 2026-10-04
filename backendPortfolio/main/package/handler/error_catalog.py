@@ -15,6 +15,7 @@ from main.package.repository import (
     RepositoryOperationError,
     SessionNotFoundError,
 )
+from main.package.service.agent import AgentBudgetExhaustedError
 from main.package.service.chat import ChatFullError, InvalidChatMessageError
 from main.package.service.contact import InvalidContactSubmissionError
 from main.package.service.data import DataSourceResponseError, DataSourceUnavailableError
@@ -23,6 +24,8 @@ _UPSTREAM_ERROR_MESSAGE = "An upstream service failed; please try again shortly"
 _UPSTREAM_BUSY_MESSAGE = "An upstream service is busy; please try again shortly"
 _INTERNAL_ERROR_MESSAGE = "Something went wrong on our side; please try again"
 _MAIL_UNAVAILABLE_MESSAGE = "Couldn't send your message right now; please email directly"
+_RATE_LIMITED_MESSAGE = "Too many requests. Please try again in a moment."
+_AGENT_BUDGET_MESSAGE = "The AI has used today's budget; every slash command still works"
 
 
 @dataclass(frozen=True)
@@ -67,8 +70,14 @@ class ErrorCatalog:
                 ErrorRule(SessionNotFoundError, HTTPStatus.UNAUTHORIZED, "SESSION_EXPIRED"),
                 ErrorRule(ChatNotFoundError, HTTPStatus.NOT_FOUND, "CHAT_NOT_FOUND"),
                 ErrorRule(ChatFullError, HTTPStatus.CONFLICT, "CHAT_FULL"),
-                ErrorRule(RateLimitExceededError, HTTPStatus.TOO_MANY_REQUESTS, "RATE_LIMITED"),
+                ErrorRule(RateLimitExceededError, HTTPStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", _RATE_LIMITED_MESSAGE),
                 ErrorRule(GroqRateLimitError, HTTPStatus.SERVICE_UNAVAILABLE, "UPSTREAM_BUSY", _UPSTREAM_BUSY_MESSAGE),
+                ErrorRule(
+                    AgentBudgetExhaustedError,
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "AGENT_BUDGET_EXHAUSTED",
+                    _AGENT_BUDGET_MESSAGE,
+                ),
                 ErrorRule(GroqClientError, HTTPStatus.BAD_GATEWAY, "UPSTREAM_ERROR", _UPSTREAM_ERROR_MESSAGE),
                 ErrorRule(DataSourceUnavailableError, HTTPStatus.BAD_GATEWAY, "UPSTREAM_ERROR", _UPSTREAM_ERROR_MESSAGE),
                 ErrorRule(DataSourceResponseError, HTTPStatus.BAD_GATEWAY, "UPSTREAM_ERROR", _UPSTREAM_ERROR_MESSAGE),

@@ -17,6 +17,18 @@ const dateFormat = new Intl.DateTimeFormat("en", {
   minute: "2-digit",
 });
 
+function ChatLabel({ chat, isActive }: { readonly chat: ChatSummary; readonly isActive: boolean }) {
+  return (
+    <>
+      <span className={`block truncate text-sm ${isActive ? "text-accent" : "text-text"}`}>{chat.title}</span>
+      <span className="flex items-center gap-2 font-mono text-[0.7rem] text-faint">
+        {chat.origin === "cli" && <span className="rounded border border-accent/30 px-1 text-accent">cli ↗</span>}
+        {dateFormat.format(new Date(chat.updated_at))}
+      </span>
+    </>
+  );
+}
+
 export function HistoryDrawer({ chats, activeChatId, onClose, onOpen, onRename, onDelete }: HistoryDrawerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -62,16 +74,19 @@ export function HistoryDrawer({ chats, activeChatId, onClose, onOpen, onRename, 
                 </form>
               ) : (
                 <>
-                  <button type="button" onClick={() => onOpen(chat.chat_id)} className="min-w-0 flex-1 text-left">
-                    <span
-                      className={`block truncate text-sm ${chat.chat_id === activeChatId ? "text-accent" : "text-text"}`}
+                  {chat.origin === "cli" ? (
+                    <a
+                      href={`/cli?chat=${encodeURIComponent(chat.chat_id)}`}
+                      className="min-w-0 flex-1 text-left"
+                      title="Opens in the Portfolio Agent CLI"
                     >
-                      {chat.title}
-                    </span>
-                    <span className="font-mono text-[0.65rem] text-faint">
-                      {dateFormat.format(new Date(chat.updated_at))}
-                    </span>
-                  </button>
+                      <ChatLabel chat={chat} isActive={false} />
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => onOpen(chat.chat_id)} className="min-w-0 flex-1 text-left">
+                      <ChatLabel chat={chat} isActive={chat.chat_id === activeChatId} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="chat-icon-button"

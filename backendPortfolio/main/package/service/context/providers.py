@@ -144,3 +144,31 @@ class CodeforcesContextProvider(ContextProvider):
             for details in self._data_service.get_codeforces_details()
         ]
         return self._template.render(accounts=accounts)
+
+
+def _format_alias(alias: str) -> str:
+    return f"/{alias}"
+
+
+class SiteContextProvider(ContextProvider):
+    def __init__(self, static_loader: StaticLoader) -> None:
+        _require_instance("static_loader", static_loader, StaticLoader)
+        manifest = static_loader.get_cli_manifest()
+        enabled = {plugin.name for plugin in manifest.plugins if plugin.enabled_by_default}
+        environment = build_prompt_environment(Path(__file__).with_name("templates"))
+        environment.filters["format_alias"] = _format_alias
+        self._text = environment.get_template("site.md").render(
+            owner_name=static_loader.get_profile().profile_details.name,
+            plugins=manifest.plugins,
+            skills=manifest.skills,
+            settings=manifest.settings,
+            counts={plugin.name: sum(skill.plugin == plugin.name for skill in manifest.skills) for plugin in manifest.plugins},
+            default_count=sum(skill.plugin in enabled for skill in manifest.skills),
+        )
+
+    @property
+    def context_type(self) -> ContextType:
+        return ContextType.SITE
+
+    def render(self) -> str:
+        return self._text

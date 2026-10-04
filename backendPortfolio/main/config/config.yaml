@@ -91,6 +91,131 @@ chat:
     PROMPT_INJECTION: "I can't change how I work, but I'm happy to answer questions about Sahib Nanda's portfolio."
     UNSAFE: "I can't help with that. Please ask a question about Sahib Nanda's portfolio."
 
+agent:
+  model:
+    model_id: "openai/gpt-oss-20b"
+    weight: 1
+    reasoning_effort: "low"
+    supports_strict_json_schema: true
+  temperature: 0.6
+  top_p: 1.0
+  styles:
+    concise: 600
+    detailed: 1100
+  plan_max_completion_tokens: 700
+  plan_fallback_message: "I couldn't turn that into terminal commands. Press Shift+Tab to switch to default mode and ask again for a direct answer."
+  max_question_chars: 500
+  max_history_messages: 6
+  max_history_chars: 2500
+  max_messages_per_chat: 200
+  cache_ttl: "6h"
+  daily_token_budget: 400000
+  markers:
+    NOT_RELATED_TO_PORTFOLIO: "⟂OOS"
+    PROMPT_INJECTION: "⟂INJ"
+    UNSAFE: "⟂UNS"
+  injection_patterns:
+    - "ignore (all |any |the )?(previous|prior|above) (instructions|prompts?|rules)"
+    - "disregard (all |any |the )?(previous|prior|above|your) (instructions|prompts?|rules)"
+    - "(reveal|show|print|repeat) (me )?(your|the) (system )?(prompt|instructions)"
+    - "\\byou are now\\b"
+    - "\\b(developer|dan|jailbreak) mode\\b"
+  off_topic_patterns:
+    - "\\b(write|generate|create|make|give) (me )?(a|an|some) (python|java|javascript|sql|bash|code|script|program|function|essay|poem|story|song|joke|letter|email|cover letter)\\b"
+    - "\\b(debug|fix|refactor|explain) (this|my) (code|bug|error|program)\\b"
+    - "\\bcapital of\\b"
+    - "\\btranslate\\b"
+    - "\\bsolve (this|my|the following)\\b"
+    - "\\bhomework\\b"
+    - "\\bweather\\b"
+    - "\\brecipe\\b"
+  default_contexts: [PROFILE]
+  context_keywords:
+    SITE:
+      - "cli"
+      - "terminal"
+      - "command"
+      - "slash"
+      - "plugin"
+      - "config"
+      - "setting"
+      - "mode"
+      - "autocomplete"
+      - "shortcut"
+      - "this site"
+      - "this website"
+      - "this portfolio"
+      - "what can you do"
+      - "how do i use"
+      - "skills in this"
+      - "skills does this"
+      - "skills do you"
+      - "skills are there"
+    PROFILE:
+      - "experience"
+      - "work"
+      - "job"
+      - "role"
+      - "compan"
+      - "intern"
+      - "project"
+      - "built"
+      - "build"
+      - "skill"
+      - "stack"
+      - "tech"
+      - "language"
+      - "educat"
+      - "degree"
+      - "college"
+      - "universit"
+      - "achiev"
+      - "award"
+      - "resume"
+      - "résumé"
+      - "contact"
+      - "email"
+      - "hire"
+      - "linkedin"
+    GITHUB:
+      - "github"
+      - "repo"
+      - "open source"
+      - "open-source"
+      - "star"
+      - "commit"
+    LEETCODE:
+      - "leetcode"
+      - "dsa"
+      - "problems solved"
+      - "streak"
+      - "rating"
+      - "contest"
+      - "competitive"
+    CODEFORCES:
+      - "codeforces"
+      - "rating"
+      - "contest"
+      - "competitive"
+      - "cp"
+    PERSONALITY:
+      - "hobb"
+      - "interest"
+      - "favo"
+      - "movie"
+      - "game"
+      - "music"
+      - "sport"
+      - "football"
+      - "cricket"
+      - "gym"
+      - "fitness"
+      - "personality"
+      - "trait"
+      - "value"
+      - "fun"
+      - "free time"
+
 context:
   max_workers: 5
   max_github_repositories: 5
@@ -115,6 +240,10 @@ rate_limit:
     chat_message:
       ip: {limit: 5, window: "1m"}
       session: {limit: 5, window: "1m"}
+      global: {limit: 60, window: "1m"}
+    agent_message:
+      ip: {limit: 6, window: "1m"}
+      session: {limit: 6, window: "1m"}
       global: {limit: 60, window: "1m"}
     details:
       ip: {limit: 30, window: "1m"}

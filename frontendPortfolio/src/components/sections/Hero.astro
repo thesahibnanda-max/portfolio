@@ -20,7 +20,7 @@ const peak = codeforces?.max_rating ?? null;
 const peakRank = peak === null ? null : codeforcesRank(peak);
 ---
 
-<section id="top" class="relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden px-5 pt-28 pb-12 sm:px-8">
+<section id="top" class="relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden px-5 pt-28 pb-12 sm:px-8 md:max-lg:min-h-[min(100svh,60rem)] md:max-lg:justify-center">
   <canvas data-hero-shader class="absolute inset-0 -z-10 size-full" aria-hidden="true"></canvas>
   <div
     class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_70%_20%,rgb(245_165_36/0.18),transparent_55%),radial-gradient(ellipse_at_10%_90%,rgb(245_165_36/0.08),transparent_50%)]"
@@ -72,7 +72,7 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
         {
           codeforces !== undefined && peak !== null && peakRank !== null && (
             <div class="bg-bg/80 p-4 backdrop-blur">
-              <dt class="eyebrow text-[0.65rem]">CF peak</dt>
+              <dt class="eyebrow text-[0.7rem]">CF peak</dt>
               <dd class="tabular mt-2 text-2xl sm:text-3xl" style={`color: ${peakRank.color}`}>
                 <span data-count={peak} data-stat={`cf.${codeforces.handle}.max`}>{formatGrouped(peak)}</span>
               </dd>
@@ -83,7 +83,7 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
         {
           leetcode !== undefined && leetcode.total_solved !== null && (
             <div class="bg-bg/80 p-4 backdrop-blur">
-              <dt class="eyebrow text-[0.65rem]">LeetCode</dt>
+              <dt class="eyebrow text-[0.7rem]">LeetCode</dt>
               <dd class="tabular mt-2 text-2xl text-text sm:text-3xl">
                 <span data-count={leetcode.total_solved} data-stat={`lc.${leetcode.username}.total`}>
                   {formatGrouped(leetcode.total_solved)}
@@ -96,7 +96,7 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
         {
           codeforces !== undefined && (
             <div class="bg-bg/80 p-4 backdrop-blur">
-              <dt class="eyebrow text-[0.65rem]">Contests</dt>
+              <dt class="eyebrow text-[0.7rem]">Contests</dt>
               <dd class="tabular mt-2 text-2xl text-text sm:text-3xl">
                 <span data-count={codeforces.contests_count} data-stat={`cf.${codeforces.handle}.contests`}>
                   {codeforces.contests_count}
@@ -116,7 +116,7 @@ const peakRank = peak === null ? null : codeforcesRank(peak);
         class="group inline-flex items-center gap-3 rounded-full bg-accent px-6 py-3 font-medium text-bg transition-all duration-300 hover:shadow-glow"
       >
         Ask my AI anything
-        <kbd class="rounded-full bg-bg/15 px-2 py-0.5 font-mono text-xs">⌘K</kbd>
+        <kbd class="hover-only rounded-full bg-bg/15 px-2 py-0.5 font-mono text-xs">⌘K</kbd>
       </button>
       <a
         href={resumeUrl}

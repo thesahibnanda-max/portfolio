@@ -19,8 +19,15 @@ Providers:
         education, projects with links) plus the primary LeetCode account's
         country, LinkedIn, Twitter and websites, plus every platform's
         usernames from DataService.
+        SITE (site.md): the portfolio site and the /cli terminal, rendered
+        once from the CLI manifest: every skill (slash command) with usage
+        and aliases, grouped by plugin with counts, the plugins, the /config
+        settings, the modes and keyboard shortcuts. It tells the model that
+        "skills" in a question about the terminal means its commands.
         PERSONALITY (personality.md): the personality JSON plus the LeetCode
-        "about me" text.
+        "about me" text. Private details (gender, height and physical
+        appearance) are deliberately left out, so the AI cannot reveal them;
+        only the nationality and favourite colours are kept.
         GITHUB (github.md): per account, repo, follower and following counts,
         bio, and the top max_repositories repositories by stars.
         LEETCODE (leetcode.md): per account, rank, problems solved by
@@ -60,6 +67,7 @@ from .providers import (
     LeetcodeContextProvider,
     PersonalityContextProvider,
     ProfileContextProvider,
+    SiteContextProvider,
 )
 
 __all__ = [
@@ -69,6 +77,7 @@ __all__ = [
     "GitHubContextProvider",
     "LeetcodeContextProvider",
     "CodeforcesContextProvider",
+    "SiteContextProvider",
     "ContextAggregator",
     "ContextError",
     "InvalidContextSettingError",

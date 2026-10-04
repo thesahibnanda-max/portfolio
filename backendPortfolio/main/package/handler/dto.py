@@ -1,12 +1,13 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from main.package.ai.common import ContextType
 from main.package.ai.orchestrator import QueryScope
-from main.package.repository import MessageRole
+from main.package.repository import ChatOrigin, MessageRole
 from main.package.service.data import ProfessionalDetails
-from main.package.static.dto import Profile
+from main.package.static.dto import CliPlugin, CliSetting, CliSkill, Favorites, Interests, Lifestyle, PersonalityTraits, Profile, SpokenLanguage
 
 
 class _RequestModel(BaseModel):
@@ -19,6 +20,7 @@ class _ResponseModel(BaseModel):
 
 class CreateChatRequest(_RequestModel):
     title: str | None = None
+    origin: Literal["chat", "cli"] | None = None
 
 
 class RenameChatRequest(_RequestModel):
@@ -27,6 +29,12 @@ class RenameChatRequest(_RequestModel):
 
 class SendMessageRequest(_RequestModel):
     message: str
+
+
+class AgentMessageRequest(_RequestModel):
+    message: str
+    style: Literal["concise", "detailed"] = "concise"
+    mode: Literal["answer", "plan"] = "answer"
 
 
 class ContactRequest(_RequestModel):
@@ -69,6 +77,7 @@ class ChatSummaryResponse(_ResponseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+    origin: ChatOrigin
 
 
 class MessageResponse(_ResponseModel):
@@ -103,12 +112,45 @@ class StreamTokenResponse(_ResponseModel):
     text: str
 
 
+class StreamStepResponse(_ResponseModel):
+    label: str
+
+
+class PlanStepResponse(_ResponseModel):
+    command: str
+    reason: str
+
+
+class StreamPlanResponse(_ResponseModel):
+    summary: str
+    steps: tuple[PlanStepResponse, ...]
+
+
+class CliManifestResponse(_ResponseModel):
+    plugins: tuple[CliPlugin, ...]
+    skills: tuple[CliSkill, ...]
+    settings: tuple[CliSetting, ...]
+    fortunes: tuple[str, ...]
+
+
 class AccountsResponse[T](_ResponseModel):
     accounts: tuple[T, ...]
 
 
 class ProfileResponse(Profile):
     profile_image_url: str
+
+
+class PublicPersonalProfile(_ResponseModel):
+    personality: PersonalityTraits
+    interests: Interests
+    favorites: Favorites
+    lifestyle: Lifestyle
+    languages: tuple[SpokenLanguage, ...]
+
+
+class PersonalityResponse(_ResponseModel):
+    personal_profile: PublicPersonalProfile
 
 
 class ProfessionalResponse(ProfessionalDetails):

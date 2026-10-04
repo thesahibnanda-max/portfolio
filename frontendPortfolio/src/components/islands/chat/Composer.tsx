@@ -84,7 +84,7 @@ export function Composer({ isStreaming, isOpen, onSend, onStop }: ComposerProps)
           </button>
         )}
       </div>
-      <p className="mt-2 flex justify-between px-1 font-mono text-[0.65rem] text-faint">
+      <p className="mt-2 flex justify-between px-1 font-mono text-[0.7rem] text-faint">
         <span>Enter to send · Shift+Enter for a new line</span>
         {text.length > MAX_MESSAGE_CHARS * 0.8 && (
           <span>

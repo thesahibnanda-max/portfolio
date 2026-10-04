@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from main.config import AppConfig
 from main.package.handler import (
+    agent_routes,
     chat_routes,
     contact_routes,
     details_routes,
@@ -53,6 +54,7 @@ class ApplicationFactory:
             health_routes.router,
             session_routes.router,
             chat_routes.router,
+            agent_routes.router,
             details_routes.router,
             static_asset_routes.router,
             contact_routes.router,

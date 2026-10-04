@@ -45,7 +45,10 @@ Envelopes:
 Routes (rate-limit api in brackets, see main.package.ratelimiter):
     GET    /health                           200 [none]
     POST   /sessions                         201 SessionResponse [create_session]
-    POST   /chats            {title?}        201 ChatSummaryResponse [chat_write]
+    POST   /chats            {title?, origin?}  201 ChatSummaryResponse [chat_write]
+        origin is "chat" (default) or "cli"; every ChatSummaryResponse
+        carries it, so the chat panel and the terminal share one history
+        and can tag each other's chats.
     GET    /chats                            200 ChatListResponse [chat_read]
     GET    /chats/{chat_id}                  200 ChatResponse [chat_read]
     PATCH  /chats/{chat_id}  {title}         200 ChatSummaryResponse [chat_write]
@@ -54,7 +57,25 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         ChatReplyResponse is {chat, answer, scope, required_contexts}; the
         contexts are the knowledge domains the answer drew on, for source chips.
     POST   /chats/{chat_id}/messages/stream {message}  200 text/event-stream [chat_message]
-    GET    /details/professional|leetcode|codeforces|github|profile|personality  200 [details]
+    POST   /chats/{chat_id}/agent/stream {message}     200 text/event-stream [agent_message]
+        Body: AgentMessageRequest {message, style: "concise"|"detailed",
+        mode: "answer"|"plan"}. In plan mode a "plan" event {summary, steps:
+        [{command, reason}]} follows the steps.
+        The Portfolio Agent for the /cli terminal (main.package.service.agent):
+        at most one Groq call, often none. It first sends one or more
+        "step" events {label} (for example "Reading profile · github",
+        "Recalling a saved answer"), then the same token, done and error
+        events as the chat stream. A used-up daily token budget answers 503
+        AGENT_BUDGET_EXHAUSTED before the stream starts. Its rate limit is
+        checked by AgentStreamOpener only after the question passed
+        validation, so a rejected (400) question never uses up the limit.
+        /details/personality returns PersonalityResponse, which leaves out
+        basic_info and physical_appearance: private details never leave the
+        server.
+    GET    /details/professional|leetcode|codeforces|github|profile|personality|cli  200 [details]
+        /details/cli returns CliManifestResponse {plugins, skills, settings,
+        fortunes}: the terminal's manifest, the single source of truth the
+        /cli page renders its skills from.
         /details/profile also returns profile_image_url, the relative path
         "/details/profile/image?v=<etag>" (the etag changes with the photo).
         /details/professional returns ProfessionalResponse, whose
@@ -62,8 +83,11 @@ Routes (rate-limit api in brackets, see main.package.ratelimiter):
         etag changes with the résumé).
     GET|HEAD /details/profile/image  200 image/jpeg, or 304 [not rate limited]
     GET|HEAD /details/resume         200 application/pdf, or 304 [not rate limited]
-        Both serve a StaticAsset from memory with ETag and Cache-Control
-        "public, max-age=31536000, immutable"; If-None-Match with the
+        Both serve a StaticAsset from memory with an ETag. Cache-Control is
+        "public, max-age=31536000, immutable" only when ?v= equals the
+        current ETag (the versioned URLs the API hands out); any other URL
+        gets "no-cache", so a replaced file is never stuck in a browser
+        cache. If-None-Match with the
         current ETag (weak or strong, or "*") answers 304. The résumé also
         sends Content-Disposition: inline; filename="<Name>_Resume.pdf",
         built from the profile name, so it opens in the browser and saves
@@ -108,10 +132,12 @@ Errors (ErrorCatalog.default(), first match along the exception's MRO):
     409 CHAT_FULL: ChatFullError.
     413 CONTENT_TOO_LARGE: a body over config.app.max_body_bytes, declared by
         Content-Length or counted while a chunked body streams in.
-    429 RATE_LIMITED: RateLimitExceededError, with Retry-After.
+    429 RATE_LIMITED: RateLimitExceededError, with Retry-After and a generic
+    public message (internal api and scope names stay in the logs).
     502 UPSTREAM_ERROR: GroqClientError, DataSourceUnavailableError,
         DataSourceResponseError, OrchestratorResponseError, WorkerResponseError.
     503 UPSTREAM_BUSY: GroqRateLimitError.
+    503 AGENT_BUDGET_EXHAUSTED: AgentBudgetExhaustedError.
     503 MAIL_UNAVAILABLE: MailDeliveryError (every SMTP account failed).
     500 INTERNAL_ERROR: RepositoryOperationError and anything else.
     4xx answers carry the exception's own (user-safe) message. 5xx answers
@@ -132,10 +158,14 @@ Streaming (POST /chats/{chat_id}/messages/stream, FastAPI EventSourceResponse):
     FastAPI adds keep-alive comments and the no-cache and X-Accel-Buffering
     headers. When the client disconnects, the dependency's teardown cancels
     the Groq stream, so nothing is saved and the visitor can retry.
+    The agent stream works the same way through AgentStreamOpener, and
+    sends its "step" events (StreamStepResponse {label}) before the first
+    token.
 
 ServiceContainer.from_config(config, transports=UpstreamTransports()):
     Builds the TTL store factory, the four clients, DataService, StaticLoader,
-    ContextAggregator, SqliteChatRepository, ChatService, the Mailer,
+    ContextAggregator, SqliteChatRepository, ChatService, AgentService (its
+    answer cache uses the data service's TTL store), the Mailer,
     EmailNormalizer and ContactService, and RateLimiter. UpstreamTransports
     lets tests pass httpx transports, an SmtpConnector and a dnspython
     resolver. close() closes

@@ -42,7 +42,7 @@ export const MessageView = memo(function MessageView({ message }: MessageViewPro
           {message.contexts
             .filter((context) => context !== "NONE")
             .map((context) => (
-              <li key={context} className="pill border-accent/25 text-[0.65rem] text-accent">
+              <li key={context} className="pill border-accent/25 text-[0.7rem] text-accent">
                 {context.toLowerCase()}
               </li>
             ))}

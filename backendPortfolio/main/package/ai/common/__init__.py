@@ -12,11 +12,18 @@ Exports:
     AiCommonError and InvalidModelSelectorSettingError: the errors.
 
 ContextType (StrEnum, in canonical order):
-    PROFILE, GITHUB, LEETCODE, CODEFORCES, PERSONALITY, NONE. Each member has
-    a description of what it covers, shown to the orchestrator in its prompt.
+    PROFILE, GITHUB, LEETCODE, CODEFORCES, PERSONALITY, SITE, NONE. Each
+    member has a description of what it covers, shown to the orchestrator
+    in its prompt.
     NONE means a general question that needs no personal context and is
     never combined with another member. The declared order is the order
     contexts are listed and aggregated in.
+
+Surface (StrEnum): CHAT or CLI, where a visitor is talking to the AI (the
+    chat panel or the /cli terminal). Its label is printed as the first line
+    of every orchestrator, worker and agent user prompt, so each model knows
+    the context of the question. Services derive it from the stored chat's
+    origin, never from the client.
 
 ChatMessage:
     Frozen, with role "user" or "assistant" and non-empty content. Prompts
@@ -60,13 +67,14 @@ Thread safety:
     can serve every thread.
 """
 
-from .dto import ChatMessage, ContextType, LLMModel, ModelChoice
+from .dto import ChatMessage, ContextType, LLMModel, ModelChoice, Surface
 from .exceptions import AiCommonError, InvalidModelSelectorSettingError
 from .model_selector import ModelSelector
 from .prompting import build_prompt_environment, first_choice_content, require_conversation
 
 __all__ = [
     "ContextType",
+    "Surface",
     "ChatMessage",
     "LLMModel",
     "ModelChoice",

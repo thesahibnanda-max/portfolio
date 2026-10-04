@@ -18,7 +18,8 @@ from main.package.handler.dto import (
     StreamTokenResponse,
 )
 from main.package.handler.json_response import PydanticJSONResponse
-from main.package.handler.request_context import ChatStreamOpener, RateLimitGuard, SessionId, State
+from main.package.handler.request_context import ChatStreamOpener, HandlerState, RateLimitGuard, SessionId, State
+from main.package.repository import ChatOrigin
 from main.package.service.chat import ChatReplyStream, ChatTokenEvent
 
 TOKEN_EVENT = "token"
@@ -39,10 +40,11 @@ _message_limit = Depends(RateLimitGuard("chat_message"))
 )
 def create_chat(session_id: SessionId, state: State, body: CreateChatRequest | None = None) -> PydanticJSONResponse:
     repository = state.container.repository
+    origin = ChatOrigin.CHAT if body is None or body.origin is None else ChatOrigin(body.origin)
     if body is None or body.title is None:
-        chat = repository.create_chat(session_id)
+        chat = repository.create_chat(session_id, origin=origin)
     else:
-        chat = repository.create_chat(session_id, body.title)
+        chat = repository.create_chat(session_id, body.title, origin)
 
     return state.responder.ok(ChatSummaryResponse.model_validate(chat), status=HTTPStatus.CREATED)
 
@@ -97,6 +99,10 @@ def stream_message(
     stream: Annotated[ChatReplyStream, Depends(ChatStreamOpener())],
     state: State,
 ) -> Iterator[ServerSentEvent]:
+    yield from reply_events(stream, state)
+
+
+def reply_events(stream: ChatReplyStream, state: HandlerState) -> Iterator[ServerSentEvent]:
     try:
         for event in stream:
             if isinstance(event, ChatTokenEvent):

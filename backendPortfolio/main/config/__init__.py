@@ -139,6 +139,39 @@ Sections and fields (defaults are written in config.yaml):
         fallback_messages: one non-blank reply for each QueryScope other than
         IN_SCOPE (NOT_RELATED_TO_PORTFOLIO, PROMPT_INJECTION, UNSAFE), sent
         instead of an AI answer when the orchestrator flags a message.
+    agent: main.package.service.agent.AgentService settings for the /cli
+    terminal, tuned to spend as few Groq tokens as possible.
+        model: one LLMModelConfig. Default "openai/gpt-oss-20b" with
+        reasoning_effort "low".
+        temperature (0 to 2) and top_p (0 to 1): fixed sampling. Defaults
+        0.6 and 1.0.
+        styles: max_completion_tokens per answer style, exactly concise and
+        detailed. Defaults 600 and 1100.
+        plan_max_completion_tokens: cap for one plan. Default 700.
+        plan_fallback_message: shown when a plan has no valid command.
+        max_question_chars: longest question after trimming. Default 500.
+        max_history_messages, max_history_chars: the short history window.
+        Defaults 6 and 2500.
+        max_messages_per_chat: int of at least 2. Default 200.
+        cache_ttl: Duration a first-turn answer is replayed for. Default "6h".
+        daily_token_budget: Groq tokens the agent may use per UTC day.
+        Default 400000.
+        markers: QueryScope (not IN_SCOPE) to the exact reply the model gives
+        for that kind of message; unique, no surrounding whitespace, none a
+        prefix of another. Defaults "⟂OOS", "⟂INJ", "⟂UNS". Each must have a
+        chat.fallback_messages entry, which is what the visitor sees.
+        injection_patterns: valid regular expressions, matched
+        case-insensitively; a match is refused with no Groq call.
+        off_topic_patterns: the same, for requests that are clearly not
+        about the owner (writing code or essays, trivia, translation); a
+        match gets the NOT_RELATED_TO_PORTFOLIO fallback with no Groq call.
+        Keep them imperative and specific so questions about the owner,
+        like "what languages does he write code in?", still pass.
+        default_contexts: non-empty, never NONE; used when no keyword
+        matches. Default [PROFILE].
+        context_keywords: ContextType (never NONE) to non-blank keywords,
+        matched case-insensitively at a word start, choosing which context
+        sections the single call receives.
     context: main.package.service.context settings.
         max_workers: int of at least 1, the aggregator's pool size. Default 5.
         max_github_repositories: top repositories by stars shown per GitHub
@@ -156,7 +189,8 @@ Sections and fields (defaults are written in config.yaml):
         limit is an int of at least 1; window is a Duration of whole
         seconds. Defaults, per "1m" unless noted: create_session 10/10/300,
         chat_read 30/30/900, chat_write 30/30/900, chat_message 5/5/60
-        (send and stream share it, since both call Groq), details
+        (send and stream share it, since both call Groq), agent_message
+        6/6/60 for the terminal's agent stream, details
         30/30/900, and contact 3 per "1h" per IP and per session with 50
         per "24h" overall. The per-visitor limits match the Java service;
         the global budgets are larger so one visitor cannot block everyone.

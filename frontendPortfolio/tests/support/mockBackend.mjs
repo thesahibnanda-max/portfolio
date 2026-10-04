@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 
 const PORT = Number(process.env.MOCK_BACKEND_PORT ?? "8080");
 const FIXTURES = new URL("../fixtures/api/", import.meta.url);
-const DETAILS = new Set(["profile", "personality", "professional", "leetcode", "codeforces", "github"]);
+const DETAILS = new Set(["profile", "personality", "professional", "leetcode", "codeforces", "github", "cli"]);
 const HEADERS = { "content-type": "application/json", "access-control-allow-origin": "*" };
 const PROFILE_IMAGE = new URL("profile-image.jpg", FIXTURES);
 const RESUME = new URL("resume.pdf", FIXTURES);
