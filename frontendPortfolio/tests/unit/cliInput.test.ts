@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ghostText, suggest } from "../../src/lib/cli/autocomplete";
 import { asciiBar, link, safeHref } from "../../src/lib/cli/blocks";
+import { COMMANDS } from "../../src/lib/cli/commands";
 import { CommandHistory } from "../../src/lib/cli/history";
 import { withKeys } from "../../src/lib/cli/keys";
+import { decideEnter, stepCall } from "../../src/lib/cli/menu";
 import { findByName, normalize, parseInput, tokenize } from "../../src/lib/cli/parser";
 import { DATA } from "./cliData";
 import { MemoryStorage } from "./support";
@@ -119,5 +121,45 @@ describe("CommandHistory", () => {
     const history = new CommandHistory(failing);
     history.push("/help");
     expect(history.items).toEqual(["/help"]);
+  });
+});
+
+describe("decideEnter", () => {
+  const command = { value: "/projects ", label: "/projects [name]", detail: "" };
+  const argument = { value: "/projects Relay", label: "Relay", detail: "" };
+
+  it("runs the highlighted command while its name is being typed", () => {
+    expect(decideEnter("/pro", command, false)).toEqual({ kind: "run", value: "/projects" });
+  });
+
+  it("runs what was typed once arguments are being typed, unless the menu was used", () => {
+    expect(decideEnter("/projects ", argument, false)).toEqual({ kind: "run", value: "/projects " });
+    expect(decideEnter("/projects rel", argument, false)).toEqual({ kind: "run", value: "/projects rel" });
+    expect(decideEnter("/projects rel", argument, true)).toEqual({ kind: "run", value: "/projects Relay" });
+    expect(decideEnter("/pro", command, true)).toEqual({ kind: "fill", value: "/projects " });
+  });
+
+  it("runs the input when there is no suggestion or it already matches", () => {
+    expect(decideEnter("hello", undefined, false)).toEqual({ kind: "run", value: "hello" });
+    expect(decideEnter("/projects", { ...command, value: "/projects" }, true)).toEqual({
+      kind: "run",
+      value: "/projects",
+    });
+  });
+});
+
+describe("stepCall", () => {
+  it("turns agent steps into tool-call labels", () => {
+    expect(stepCall("Reading profile · github")).toEqual({ name: "Read", argument: "profile · github" });
+    expect(stepCall("Recalling a saved answer")).toEqual({ name: "Recall", argument: "saved answer" });
+    expect(stepCall("Checking the question")).toEqual({ name: "Check", argument: "question" });
+    expect(stepCall("Something new")).toEqual({ name: "Something new", argument: "" });
+  });
+});
+
+describe("full slash menu", () => {
+  it("lists every command for a bare slash", () => {
+    expect(suggest("/", DATA)).toHaveLength(COMMANDS.length);
+    expect(suggest("/e", DATA).length).toBeLessThanOrEqual(8);
   });
 });

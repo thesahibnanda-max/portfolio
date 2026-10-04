@@ -2,7 +2,7 @@
 import Terminal from "../components/islands/cli/Terminal";
 import { builtAt, codeforces, github, leetcode, professional, profile, resumeUrl } from "../content/snapshot";
 import CliLayout from "../layouts/CliLayout.astro";
-import type { CliData } from "../lib/cli/data";
+import { type CliData, summarizeLeetcode } from "../lib/cli/data";
 
 const TOP_REPOSITORIES = 5;
 const ownerName = profile.profile_details.name;
@@ -11,7 +11,7 @@ const data: CliData = {
   ownerName,
   profile,
   professional,
-  leetcode: leetcode.accounts,
+  leetcode: leetcode.accounts.map(summarizeLeetcode),
   codeforces: codeforces.accounts,
   github: github.accounts.map((account) => ({
     ...account,

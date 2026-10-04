@@ -13,6 +13,7 @@ export type Block =
   | { readonly kind: "heading"; readonly text: string; readonly meta?: string }
   | { readonly kind: "lines"; readonly lines: readonly Line[]; readonly indent?: boolean }
   | { readonly kind: "list"; readonly items: readonly Line[] }
+  | { readonly kind: "table"; readonly rows: readonly (readonly Line[])[] }
   | { readonly kind: "pairs"; readonly pairs: readonly (readonly [string, Line])[] }
   | { readonly kind: "chips"; readonly items: readonly string[] }
   | { readonly kind: "bars"; readonly bars: readonly Bar[] }
@@ -43,7 +44,7 @@ export function span(text: string, tone?: Tone, bold?: boolean): Span {
 
 export function link(text: string, href: string): Span {
   const safe = safeHref(href);
-  return safe === undefined ? { text } : { text, href: safe, tone: "accent" };
+  return safe === undefined ? { text } : { text, href: safe };
 }
 
 export function text(...lines: readonly string[]): Block {

@@ -6,7 +6,7 @@ import {
   isCurrent,
   profileHandle,
 } from "../format";
-import { asciiBar, type Block, error, hint, type Line, link, span } from "./blocks";
+import { type Block, error, hint, type Line, link, span } from "./blocks";
 import type { CliData, LiveStats } from "./data";
 import { findByName } from "./parser";
 
@@ -46,7 +46,7 @@ export interface Command {
 }
 
 const STATS_TARGETS: readonly StatsTarget[] = ["leetcode", "codeforces", "github"];
-export const BAR_WIDTH = 24;
+export const BAR_WIDTH = 16;
 const RECENT_CONTESTS = 5;
 const TOP_REPOSITORIES = 5;
 
@@ -83,8 +83,9 @@ function socialPairs(data: CliData): (readonly [string, Line])[] {
   const pairs: (readonly [string, Line])[] = [];
   const email = data.profile.profile_details.email;
   pairs.push(["Email", [link(email, `mailto:${email}`)]]);
-  for (const url of data.professional.github_links) {
-    pairs.push(["GitHub", [link(profileHandle(url), url)]]);
+  const githubLinks = data.professional.github_links;
+  for (const [index, url] of githubLinks.entries()) {
+    pairs.push([githubLinks.length > 1 ? `GitHub ${index + 1}` : "GitHub", [link(profileHandle(url), url)]]);
   }
   const linkedin = linkedinUrl(data);
   if (linkedin !== null) {
@@ -132,7 +133,7 @@ function whoami(_input: CommandInput, { data, now }: CommandContext): CommandEff
         [
           span(current.title, "text", true),
           span(" at ", "muted"),
-          span(current.company, "accent"),
+          span(current.company, "text", true),
           span(` · ${current.location} · ${experienceDuration(current, now)}`, "faint"),
         ],
       ],
@@ -164,13 +165,11 @@ function experience({ rest }: CommandInput, { data, now }: CommandContext): Comm
     return print(
       { kind: "heading", text: "Experience", meta: `${jobs.length} roles` },
       {
-        kind: "list",
-        items: jobs.map((job) => [
-          span(isCurrent(job) ? "● " : "○ ", isCurrent(job) ? "success" : "faint"),
-          span(job.title, "text", true),
-          span(" · ", "faint"),
-          span(job.company, "accent"),
-          span(`  ${period(job.start_date, job.end_date)} (${experienceDuration(job, now)})`, "faint"),
+        kind: "table",
+        rows: jobs.map((job) => [
+          [span(isCurrent(job) ? "●" : "○", isCurrent(job) ? "success" : "faint")],
+          [span(job.title, "text", true), span(" · ", "faint"), span(job.company, "muted")],
+          [span(`${period(job.start_date, job.end_date)} · ${experienceDuration(job, now)}`, "faint")],
         ]),
       },
       hint("Details: /experience <company>"),
@@ -209,12 +208,11 @@ function projects({ rest }: CommandInput, { data }: CommandContext): CommandEffe
     return print(
       { kind: "heading", text: "Projects", meta: `${items.length} shipped` },
       {
-        kind: "list",
-        items: items.map((project, index) => [
-          span(`${String(index + 1).padStart(2, "0")}  `, "faint"),
-          span(project.name, "text", true),
-          span(`  ${project.year}`, "faint"),
-          span(`  ${project.technologies.slice(0, 3).join(" · ")}`, "muted"),
+        kind: "table",
+        rows: items.map((project, index) => [
+          [span(String(index + 1).padStart(2, "0"), "faint")],
+          [span(project.name, "text", true)],
+          [span(String(project.year), "faint")],
         ]),
       },
       hint("Details: /projects <name>"),
@@ -278,7 +276,7 @@ function education(_input: CommandInput, { data }: CommandContext): CommandEffec
 function achievements(_input: CommandInput, { data }: CommandContext): CommandEffect {
   return print(
     { kind: "heading", text: "Achievements", meta: String(data.profile.achievements.length) },
-    { kind: "list", items: data.profile.achievements.map((item) => [span("★ ", "accent"), span(item)]) },
+    { kind: "list", items: data.profile.achievements.map((item) => [span(item)]) },
   );
 }
 
@@ -565,7 +563,7 @@ function leetcodeBlocks(account: LiveStats["leetcode"][number]): readonly Block[
           [
             span(
               optional(account.contest_rating, (value) => formatGrouped(Math.round(value))),
-              "accent",
+              "text",
               true,
             ),
           ],
@@ -586,7 +584,7 @@ function codeforcesBlocks(account: LiveStats["codeforces"][number]): readonly Bl
     {
       kind: "pairs",
       pairs: [
-        ["Rating", [span(optional(account.current_rating), "accent", true)]],
+        ["Rating", [span(optional(account.current_rating), "text", true)]],
         ["Peak", [span(optional(account.max_rating))]],
         ["Contests", [span(formatGrouped(account.contests_count))]],
       ],
@@ -595,13 +593,13 @@ function codeforcesBlocks(account: LiveStats["codeforces"][number]): readonly Bl
       ? []
       : [
           {
-            kind: "list",
-            items: recent.map((change): Line => {
+            kind: "table",
+            rows: recent.map((change): readonly Line[] => {
               const delta = change.new_rating - change.old_rating;
               return [
-                span(`${delta >= 0 ? "+" : ""}${delta}`.padStart(5), delta >= 0 ? "success" : "danger", true),
-                span(`  ${change.new_rating}  `, "text"),
-                span(change.contest_name, "muted"),
+                [span(`${delta >= 0 ? "+" : ""}${delta}`, delta >= 0 ? "success" : "danger", true)],
+                [span(String(change.new_rating))],
+                [span(change.contest_name, "muted")],
               ];
             }),
           } satisfies Block,
@@ -611,7 +609,6 @@ function codeforcesBlocks(account: LiveStats["codeforces"][number]): readonly Bl
 
 function githubBlocks(account: LiveStats["github"][number]): readonly Block[] {
   const top = [...account.repositories].sort((left, right) => right.stars - left.stars).slice(0, TOP_REPOSITORIES);
-  const maxStars = Math.max(1, ...top.map((repository) => repository.stars));
   return [
     { kind: "heading", text: `GitHub · @${account.username}`, meta: `${formatGrouped(account.public_repos)} repos` },
     {
@@ -625,14 +622,12 @@ function githubBlocks(account: LiveStats["github"][number]): readonly Block[] {
       ? []
       : [
           {
-            kind: "list",
-            items: top.map(
-              (repository): Line => [
-                link(repository.name, repository.html_url),
-                span(`  ${asciiBar(repository.stars, maxStars, 8)} ★${repository.stars}`, "accent"),
-                span(repository.language === null ? "" : `  ${repository.language}`, "faint"),
-              ],
-            ),
+            kind: "table",
+            rows: top.map((repository): readonly Line[] => [
+              [link(repository.name, repository.html_url)],
+              [span(`★ ${repository.stars}`, "muted")],
+              [span(repository.language ?? "—", "faint")],
+            ]),
           } satisfies Block,
         ]),
   ];

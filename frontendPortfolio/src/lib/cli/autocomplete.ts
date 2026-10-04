@@ -37,7 +37,7 @@ function commandSuggestions(typed: string): readonly Suggestion[] {
   const ranked = COMMANDS.map((command) => ({ command, score: commandScore(command, typed) }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score);
-  return ranked.slice(0, MAX_SUGGESTIONS).map(({ command }) => ({
+  return ranked.slice(0, typed === "" ? ranked.length : MAX_SUGGESTIONS).map(({ command }) => ({
     value: command.argOptions === undefined && !command.usage.includes("<") ? `/${command.name}` : `/${command.name} `,
     label: command.usage,
     detail: command.summary,

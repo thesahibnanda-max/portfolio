@@ -1,10 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
-import { MockApi, type MockOptions } from "./mockApi";
+import { MockApi, type MockOptions, seedSession } from "./mockApi";
 
-async function openCli(page: Page, options: MockOptions = {}): Promise<MockApi> {
+async function openCli(page: Page, options: MockOptions = {}, path = "/cli"): Promise<MockApi> {
   const api = new MockApi(options);
   await api.install(page);
-  await page.goto("/cli");
+  await page.goto(path);
   await expect(page.locator("#term-input")).toBeFocused();
   return api;
 }
@@ -25,29 +25,41 @@ test("opens from the chat panel's Portfolio Agent CLI button", async ({ page }) 
     .getByRole("link", { name: /Portfolio Agent CLI/ })
     .click();
 
-  await expect(page).toHaveURL(/\/cli$/);
-  await expect(page.getByText("Welcome to")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("@portfolio: ~/agent");
+  await expect(page).toHaveURL(/\/cli\/?$/);
+  await expect(log(page)).toContainText("Welcome to");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Portfolio Agent CLI/);
 });
 
-test("the slash menu completes commands and arguments from the keyboard", async ({ page }) => {
+test("a bare slash lists every command and Tab then Enter runs the overview", async ({ page }) => {
   await openCli(page);
   const input = page.locator("#term-input");
 
-  await input.pressSequentially("/pro");
-  const menu = page.getByRole("listbox", { name: "Suggestions" });
-  await expect(menu.getByRole("option").first()).toContainText("/projects [name]");
-  await page.keyboard.press("Tab");
-  await expect(input).toHaveValue("/projects ");
+  await input.fill("/");
+  const options = page.getByRole("listbox", { name: "Suggestions" }).getByRole("option");
+  await expect(options).toHaveCount(16);
+  await expect(options.last()).toContainText("/go-back");
 
-  await input.pressSequentially("relay");
-  await expect(menu.getByRole("option").first()).toContainText("Relay");
+  await input.fill("/ex");
+  await page.keyboard.press("Tab");
+  await expect(input).toHaveValue("/experience ");
+  await page.keyboard.press("Enter");
+
+  await expect(log(page)).toContainText("Experience (8 roles)");
+  await expect(log(page)).toContainText("Details: /experience <company>");
+});
+
+test("arguments complete from the data and the highlighted one runs after arrow keys", async ({ page }) => {
+  await openCli(page);
+  const input = page.locator("#term-input");
+
+  await input.fill("/projects rel");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowUp");
   await page.keyboard.press("Enter");
 
   await expect(input).toHaveValue("");
-  await expect(log(page)).toContainText("You typed: /projects Relay - Multi-Agent Collaboration for AI Coding CLIs");
+  await expect(log(page)).toContainText("/projects Relay - Multi-Agent Collaboration for AI Coding CLIs");
   await expect(log(page).getByRole("link", { name: "https://relay-sahib-nanda.vercel.app" })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Technologies" }).last()).toBeVisible();
 });
 
 test("slash commands answer instantly without calling the AI", async ({ page }) => {
@@ -56,24 +68,23 @@ test("slash commands answer instantly without calling the AI", async ({ page }) 
   await type(page, "/experience cred");
   await expect(log(page)).toContainText("CRED");
   await type(page, "/whoami");
-  await expect(log(page)).toContainText("CheQ");
+  await expect(log(page)).toContainText("GitHub 2");
   await type(page, "/projx");
   await expect(log(page)).toContainText("Did you mean /projects [name]?");
   await page.keyboard.press("Control+l");
-  await expect(log(page)).not.toContainText("CheQ");
+  await expect(log(page)).not.toContainText("CRED");
 
   expect(api.agentQuestions).toEqual([]);
 });
 
-test("a question streams steps and a markdown answer from the agent", async ({ page }) => {
+test("a question shows the tool call, the answer and its cost", async ({ page }) => {
   const api = await openCli(page);
 
   await type(page, "who is he?");
 
-  await expect(log(page)).toContainText("Reading profile · github");
+  await expect(log(page)).toContainText("Read(profile · github)");
   await expect(log(page).locator("strong", { hasText: "backend engineer" })).toBeVisible();
-  await expect(log(page)).toContainText(/answered in \d+\.\d+s/);
-  await expect(page.getByText("agent online")).toBeVisible();
+  await expect(log(page)).toContainText(/1 AI call · \d+\.\ds/);
   expect(api.agentQuestions).toEqual(["who is he?"]);
   expect(api.createdChats).toEqual([{ title: "who is he?", origin: "cli" }]);
 
@@ -94,12 +105,13 @@ test("Escape interrupts a running answer", async ({ page }) => {
   api.releaseStream();
 });
 
-test("rate limits show a countdown while slash commands keep working", async ({ page }) => {
-  await openCli(page, { rateLimitAgent: true });
+test("a rate-limited first question leaves no empty conversation behind", async ({ page }) => {
+  const api = await openCli(page, { rateLimitAgent: true });
 
   await type(page, "who is he?");
   await expect(log(page)).toContainText("rate limited · retry in 42s");
-  await expect(page.getByText(/agent rate limited · \d+s/)).toBeVisible();
+  await expect(page.getByText(/^rate limited · \d+s$/)).toBeVisible();
+  await expect.poll(() => api.deletedChats).toEqual(["cli-chat-for-session-1"]);
 
   await type(page, "another question");
   await expect(log(page)).toContainText("The agent is rate limited for");
@@ -107,18 +119,41 @@ test("rate limits show a countdown while slash commands keep working", async ({ 
   await expect(log(page)).toContainText("Distributed Systems");
 });
 
+test("the input grows with a long question", async ({ page }) => {
+  await openCli(page);
+  const input = page.locator("#term-input");
+  const oneLine = (await input.boundingBox())?.height ?? 0;
+
+  await input.fill("tell me about ".repeat(30));
+
+  expect((await input.boundingBox())?.height ?? 0).toBeGreaterThan(oneLine * 2);
+});
+
 test("history lists CLI conversations and reopens one", async ({ page }) => {
   await openCli(page);
   await type(page, "who is he?");
-  await expect(log(page)).toContainText(/answered in/);
+  await expect(log(page)).toContainText(/1 AI call/);
 
   await type(page, "/history");
   await expect(log(page)).toContainText("Earlier terminal chat");
-  await expect(log(page)).toContainText("cli");
   await type(page, "/open 1");
 
   await expect(log(page)).toContainText("Who is he?");
   await expect(log(page).locator("strong", { hasText: "backend" })).toBeVisible();
+});
+
+test("a terminal conversation picked in the chat history opens in the terminal", async ({ page }) => {
+  await seedSession(page);
+  await new MockApi({ seedHistory: true }).install(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Ask my AI anything" }).click();
+  const dialog = page.getByRole("dialog", { name: /Ask about/ });
+  await dialog.getByRole("button", { name: "Chat history" }).click();
+  await dialog.getByRole("link", { name: /Earlier terminal chat/ }).click();
+
+  await expect(page).toHaveURL(/\/cli\/?$/);
+  await expect(log(page)).toContainText("Earlier terminal chat");
+  await expect(log(page)).toContainText("Who is he?");
 });
 
 test("/go-back returns to the portfolio", async ({ page }) => {
@@ -131,10 +166,9 @@ test("/go-back returns to the portfolio", async ({ page }) => {
 
 test("fits the screen without horizontal scrolling", async ({ page }) => {
   await openCli(page);
-  await type(page, "/stats");
-  await expect(log(page)).toContainText("showing the snapshot");
-  await expect(log(page)).toContainText("Codeforces · shisukenohara");
-  await type(page, "/skills");
+  for (const command of ["/stats", "/experience", "/projects", "/skills"]) {
+    await type(page, command);
+  }
   await expect(log(page)).toContainText("Distributed Systems");
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBe(0);

@@ -12,6 +12,7 @@ import { type Block, hint, span } from "../../../lib/cli/blocks";
 import { type CommandEffect, runCommand, type StatsTarget, statsBlocks } from "../../../lib/cli/commands";
 import type { CliData, LiveStats } from "../../../lib/cli/data";
 import { CommandHistory } from "../../../lib/cli/history";
+import { decideEnter } from "../../../lib/cli/menu";
 import { parseInput } from "../../../lib/cli/parser";
 import { initialTerminalState, terminalReducer } from "../../../lib/cli/terminalState";
 import { BACKEND_BASE_URL } from "../../../lib/config";
@@ -19,6 +20,7 @@ import { EntryView } from "./EntryView";
 import { Prompt } from "./Prompt";
 import { useAgent } from "./useAgent";
 
+const CHAT_PARAMETER = "chat";
 const QUICK_COMMANDS = [
   "/whoami",
   "/experience",
@@ -80,6 +82,7 @@ export default function Terminal({ data }: { readonly data: CliData }) {
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState(0);
   const [menuDismissed, setMenuDismissed] = useState(false);
+  const [menuTouched, setMenuTouched] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -102,7 +105,12 @@ export default function Terminal({ data }: { readonly data: CliData }) {
   useEffect(() => {
     historyRef.current = new CommandHistory(tabStorage());
     inputRef.current?.focus();
-  }, []);
+    const chatId = new URLSearchParams(window.location.search).get(CHAT_PARAMETER);
+    if (chatId !== null && chatId !== "") {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+      void agent.openChatById(chatId);
+    }
+  }, [agent.openChatById]);
 
   useEffect(() => {
     if (state.rateLimitedUntil === null) {
@@ -235,6 +243,7 @@ export default function Terminal({ data }: { readonly data: CliData }) {
       setInput("");
       setSelected(0);
       setMenuDismissed(false);
+      setMenuTouched(false);
       dispatch({ type: "entries-added", entries: [{ id: newId(), kind: "input", text: parsed.raw }] });
       if (parsed.kind === "question") {
         void agent.ask(parsed.rest);
@@ -245,17 +254,22 @@ export default function Terminal({ data }: { readonly data: CliData }) {
     [agent, applyEffect, data, leaving],
   );
 
-  const accept = useCallback(
-    (suggestion: Suggestion, execute: boolean) => {
-      if (execute && !suggestion.value.endsWith(" ")) {
+  const fill = useCallback((value: string) => {
+    setInput(value);
+    setSelected(0);
+    setMenuTouched(false);
+    inputRef.current?.focus();
+  }, []);
+
+  const pick = useCallback(
+    (suggestion: Suggestion) => {
+      if (suggestion.value.endsWith(" ")) {
+        fill(suggestion.value);
+      } else {
         run(suggestion.value);
-        return;
       }
-      setInput(suggestion.value);
-      setSelected(0);
-      inputRef.current?.focus();
     },
-    [run],
+    [fill, run],
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -265,11 +279,11 @@ export default function Terminal({ data }: { readonly data: CliData }) {
 
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
-      const choice = suggestions[selected];
-      if (isMenuOpen && choice !== undefined && choice.value.trim() !== input.trim()) {
-        accept(choice, true);
+      const decision = decideEnter(input, isMenuOpen ? suggestions[selected] : undefined, menuTouched);
+      if (decision.kind === "fill") {
+        fill(decision.value);
       } else {
-        run(input);
+        run(decision.value);
       }
       return;
     }
@@ -277,7 +291,7 @@ export default function Terminal({ data }: { readonly data: CliData }) {
       event.preventDefault();
       const choice = suggestions[selected];
       if (choice !== undefined) {
-        accept(choice, false);
+        fill(choice.value);
       }
       return;
     }
@@ -291,6 +305,7 @@ export default function Terminal({ data }: { readonly data: CliData }) {
       if (isMenuOpen) {
         event.preventDefault();
         setSelected((index) => (index + (up ? -1 : 1) + suggestions.length) % suggestions.length);
+        setMenuTouched(true);
         return;
       }
       if (!input.includes("\n") && historyRef.current !== null) {
@@ -331,87 +346,80 @@ export default function Terminal({ data }: { readonly data: CliData }) {
     }
   };
 
-  const status = state.busy
-    ? { tone: "text-accent", label: "thinking" }
-    : limitedFor > 0
-      ? { tone: "text-danger", label: `rate limited · ${limitedFor}s` }
-      : { tone: "text-success", label: "online" };
+  const status = state.busy ? (
+    <span className="text-accent">esc to interrupt</span>
+  ) : limitedFor > 0 ? (
+    <span className="text-danger">rate limited · {limitedFor}s</span>
+  ) : (
+    <button type="button" className="term-link" onClick={() => run("/go-back")}>
+      ← portfolio
+    </button>
+  );
 
   return (
     <div ref={rootRef} className="term-root" data-leaving={leaving ? "" : undefined} data-terminal>
-      <div className="term-window">
-        <header className="flex items-center gap-3 border-b border-line px-4 py-2.5">
-          <div className="flex gap-1.5" aria-hidden="true">
-            <span className="term-dot bg-danger/70" />
-            <span className="term-dot bg-accent/70" />
-            <span className="term-dot bg-success/70" />
-          </div>
-          <h1 className="min-w-0 flex-1 truncate text-center text-xs text-muted">
-            {data.ownerName.split(" ")[0]?.toLowerCase()}@portfolio: ~/agent
-          </h1>
-          <button
-            type="button"
-            onClick={() => run("/go-back")}
-            className="rounded-full border border-line px-3 py-1 text-xs text-muted transition-colors duration-200 hover:border-accent/50 hover:text-accent"
-          >
-            ← Portfolio
-          </button>
-        </header>
-
-        <div
-          ref={scrollRef}
-          className="term-scroll"
-          role="log"
-          aria-live="polite"
-          aria-busy={state.busy}
-          aria-label="Terminal output"
-          data-lenis-prevent
-          onMouseUp={() => {
-            if (window.getSelection()?.toString() === "") {
-              inputRef.current?.focus({ preventScroll: true });
-            }
-          }}
-        >
+      <h1 className="sr-only">{data.ownerName} · Portfolio Agent CLI</h1>
+      <div
+        ref={scrollRef}
+        className="term-scroll"
+        role="log"
+        aria-live="polite"
+        aria-busy={state.busy}
+        aria-label="Terminal output"
+        data-lenis-prevent
+        onMouseUp={() => {
+          if (window.getSelection()?.toString() === "") {
+            inputRef.current?.focus({ preventScroll: true });
+          }
+        }}
+      >
+        <div className="term-column">
           {state.entries.map((entry) => (
             <EntryView key={entry.id} entry={entry} data={data} />
           ))}
         </div>
+      </div>
 
-        <div className="border-t border-line px-4 pt-3 pb-2 md:px-7">
-          <Prompt
-            value={input}
-            ghost={ghost}
-            suggestions={suggestions}
-            selected={Math.min(selected, Math.max(0, suggestions.length - 1))}
-            busy={state.busy}
-            inputRef={inputRef}
-            onChange={(value) => {
-              setInput(value);
-              setSelected(0);
-              setMenuDismissed(false);
-            }}
-            onKeyDown={onKeyDown}
-            onPick={(suggestion) => accept(suggestion, true)}
-            onHover={setSelected}
-          />
-          <nav aria-label="Quick commands" className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden">
-            {QUICK_COMMANDS.map((command) => (
-              <button key={command} type="button" className="term-quick" onClick={() => run(command)}>
-                {command}
-              </button>
-            ))}
-          </nav>
-          <div className="mt-1 flex items-center justify-between gap-3 text-[0.7rem] text-faint">
-            <span className={status.tone}>
-              <span aria-hidden="true">● </span>
-              agent {status.label}
+      <div className="term-column pt-[0.6em] pb-[max(0.6em,env(safe-area-inset-bottom))]">
+        <Prompt
+          value={input}
+          ghost={ghost}
+          suggestions={suggestions}
+          selected={Math.min(selected, Math.max(0, suggestions.length - 1))}
+          busy={state.busy}
+          inputRef={inputRef}
+          onChange={(value) => {
+            setInput(value);
+            setSelected(0);
+            setMenuDismissed(false);
+            setMenuTouched(false);
+          }}
+          onKeyDown={onKeyDown}
+          onPick={pick}
+          onHover={(index) => {
+            setSelected(index);
+            setMenuTouched(true);
+          }}
+        />
+        {suggestions.length === 0 && (
+          <div className="mt-[0.35em] flex items-center justify-between gap-[2ch] px-[0.9em] text-faint">
+            <span>
+              <span className="hover-only">? for shortcuts · ↑↓ history</span>
+              <span className="touch-only">/help for commands</span>
             </span>
-            <span className="hidden sm:inline">
-              {state.chatId === null ? "new conversation" : "conversation saved for 12h"} · ? for help · ↑↓ history ·
-              esc to stop
-            </span>
+            {status}
           </div>
-        </div>
+        )}
+        <nav
+          aria-label="Quick commands"
+          className="touch-only term-quick-row mt-[0.5em] flex gap-[1ch] overflow-x-auto"
+        >
+          {QUICK_COMMANDS.map((command) => (
+            <button key={command} type="button" className="term-quick" onClick={() => run(command)}>
+              {command}
+            </button>
+          ))}
+        </nav>
       </div>
     </div>
   );

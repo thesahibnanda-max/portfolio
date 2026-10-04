@@ -12,6 +12,7 @@ export interface MockOptions {
   readonly holdStream?: boolean;
   readonly rateLimitAgent?: boolean;
   readonly agentAnswer?: string;
+  readonly seedHistory?: boolean;
 }
 
 function envelope(data: unknown, status = 200) {
@@ -62,6 +63,7 @@ export class MockApi {
   readonly contactBodies: unknown[] = [];
   readonly createdChats: unknown[] = [];
   readonly agentQuestions: string[] = [];
+  readonly deletedChats: string[] = [];
   #releaseStream: (() => void) | null = null;
 
   constructor(private readonly options: MockOptions = {}) {}
@@ -102,9 +104,19 @@ export class MockApi {
         200,
         envelope({
           chats:
-            this.createdChats.length === 0 ? [] : [chat(`cli-chat-for-${sessionId}`, "cli", "Earlier terminal chat")],
+            this.createdChats.length === 0 && this.options.seedHistory !== true
+              ? []
+              : [
+                  chat(`cli-chat-for-${sessionId}`, "cli", "Earlier terminal chat"),
+                  chat("panel-chat", "chat", "Panel chat"),
+                ],
         }),
       );
+      return;
+    }
+    if (/^\/chats\/[^/]+$/.test(url.pathname) && request.method() === "DELETE") {
+      this.deletedChats.push(url.pathname.split("/")[2] ?? "");
+      await route.fulfill({ status: 204, headers: corsHeaders() });
       return;
     }
     if (/^\/chats\/[^/]+$/.test(url.pathname) && request.method() === "GET") {
@@ -241,4 +253,17 @@ function corsHeaders(): Record<string, string> {
 
 async function json(route: Route, status: number, body: string): Promise<void> {
   await route.fulfill({ status, contentType: "application/json", headers: corsHeaders(), body });
+}
+
+export async function seedSession(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "portfolio.session",
+      JSON.stringify({
+        session_id: "seeded-session",
+        created_at: "2026-10-02T00:00:00Z",
+        expires_at: "2099-01-01T00:00:00Z",
+      }),
+    );
+  });
 }

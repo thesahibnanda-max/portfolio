@@ -67,6 +67,8 @@ describe("explore commands", () => {
     expect(text).toContain("CheQ");
     expect(text).toContain("mailto:");
     expect(text).toContain("linkedin.com/in/sahib-nanda");
+    expect(text).toContain('"GitHub 1"');
+    expect(text).toContain('"GitHub 2"');
   });
 
   it("/experience lists every role and details every role at one company", () => {
@@ -81,6 +83,8 @@ describe("explore commands", () => {
     expect(relay).toContain("Relay - Multi-Agent Collaboration for AI Coding CLIs");
     expect(relay).toContain('"kind":"chips"');
     expect(textOf(printed(run("/projects")))).toContain("fastclient");
+    expect(printed(run("/projects"))[1]).toMatchObject({ kind: "table" });
+    expect(printed(run("/experience"))[1]).toMatchObject({ kind: "table" });
   });
 
   it("explains misses with the valid options", () => {
@@ -111,6 +115,8 @@ describe("explore commands", () => {
     expect(all).toContain("GitHub · @");
     expect(statsBlocks("leetcode", DATA).some((block) => block.kind === "bars")).toBe(true);
     expect(textOf(statsBlocks("codeforces", DATA))).not.toContain("LeetCode");
+    expect(statsBlocks("github", DATA).some((block) => block.kind === "bars")).toBe(false);
+    expect(textOf(statsBlocks("github", DATA))).toContain("★ ");
   });
 });
 

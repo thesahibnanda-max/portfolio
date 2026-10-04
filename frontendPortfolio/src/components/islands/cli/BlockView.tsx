@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { asciiBar, type Block, type Line, type Tone } from "../../../lib/cli/blocks";
 import { BAR_WIDTH } from "../../../lib/cli/commands";
 import { describe, withKeys } from "../../../lib/cli/keys";
@@ -26,7 +26,7 @@ export function LineView({ line }: { readonly line: Line }): ReactNode {
         href={part.href}
         target={part.href.startsWith("mailto:") ? undefined : "_blank"}
         rel="noopener noreferrer"
-        className={`${className} underline decoration-accent/40 underline-offset-2 hover:decoration-accent`}
+        className={`${className} term-link break-all`}
       >
         {part.text}
       </a>
@@ -38,14 +38,14 @@ export function BlockView({ block }: { readonly block: Block }): ReactNode {
   switch (block.kind) {
     case "heading":
       return (
-        <p className="mt-3 flex flex-wrap items-baseline gap-x-3 first:mt-0">
-          <span className="font-semibold text-accent">{block.text}</span>
-          {block.meta !== undefined && <span className="text-xs text-faint">{block.meta}</span>}
+        <p className="mt-2 font-semibold first:mt-0">
+          {block.text}
+          {block.meta !== undefined && <span className="font-normal text-faint"> · {block.meta}</span>}
         </p>
       );
     case "lines":
       return (
-        <div className={block.indent === true ? "pl-4" : undefined}>
+        <div className={block.indent === true ? "pl-[2ch]" : undefined}>
           {withKeys(block.lines, describe).map(([key, line]) => (
             <p key={key} className="whitespace-pre-wrap break-words">
               <LineView line={line} />
@@ -55,17 +55,41 @@ export function BlockView({ block }: { readonly block: Block }): ReactNode {
       );
     case "list":
       return (
-        <ul className="grid gap-0.5">
+        <ul>
           {withKeys(block.items, describe).map(([key, line]) => (
-            <li key={key} className="whitespace-pre-wrap break-words">
+            <li key={key} className="relative pl-[2ch] break-words">
+              <span className="absolute left-0 text-faint" aria-hidden="true">
+                -
+              </span>
               <LineView line={line} />
             </li>
           ))}
         </ul>
       );
+    case "table": {
+      const columns = block.rows[0]?.length ?? 1;
+      return (
+        <div className="term-table" data-flex-last style={{ "--term-columns": columns } as CSSProperties}>
+          {withKeys(block.rows, describe).map(([key, row]) => (
+            <div key={key} className="term-row">
+              <span className="break-words">
+                <LineView line={row[0] ?? []} />
+              </span>
+              <span className="term-rest">
+                {withKeys(row.slice(1), describe).map(([cellKey, cell]) => (
+                  <span key={cellKey} className="break-words">
+                    <LineView line={cell} />
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
     case "pairs":
       return (
-        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-0.5 sm:gap-x-5">
+        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-[2ch]">
           {withKeys(block.pairs, describe).map(([key, [label, value]]) => (
             <div key={key} className="contents">
               <dt className="text-faint">{label}</dt>
@@ -77,22 +101,14 @@ export function BlockView({ block }: { readonly block: Block }): ReactNode {
         </dl>
       );
     case "chips":
-      return (
-        <ul className="mt-1 flex flex-wrap gap-1.5" aria-label="Technologies">
-          {block.items.map((item) => (
-            <li key={item} className="term-chip">
-              {item}
-            </li>
-          ))}
-        </ul>
-      );
+      return <p className="text-muted">{block.items.join(" · ")}</p>;
     case "bars":
       return (
-        <ul className="grid gap-0.5">
+        <ul>
           {block.bars.map((bar) => (
-            <li key={bar.label} className="flex gap-3 whitespace-pre">
-              <span className="w-16 text-faint">{bar.label}</span>
-              <span className="overflow-hidden text-accent" aria-hidden="true">
+            <li key={bar.label} className="flex gap-[2ch] whitespace-pre">
+              <span className="w-[7ch] text-faint">{bar.label}</span>
+              <span className="text-muted" aria-hidden="true">
                 {asciiBar(bar.value, bar.max, BAR_WIDTH)}
               </span>
               <span>{bar.caption}</span>
@@ -101,12 +117,7 @@ export function BlockView({ block }: { readonly block: Block }): ReactNode {
         </ul>
       );
     case "error":
-      return (
-        <p className="text-danger">
-          <span aria-hidden="true">✗ </span>
-          {block.text}
-        </p>
-      );
+      return <p className="text-danger">Error: {block.text}</p>;
     case "hint":
       return <p className="text-faint">{block.text}</p>;
   }

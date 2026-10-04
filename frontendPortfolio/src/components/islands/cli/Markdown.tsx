@@ -18,23 +18,13 @@ function renderNode(key: string, node: Inline): ReactNode {
     );
   }
   if (node.kind === "em") {
-    return (
-      <em key={key} className="text-muted italic">
-        {renderInline(node.children)}
-      </em>
-    );
+    return <span key={key}>{renderInline(node.children)}</span>;
   }
   if (node.kind === "code") {
     return <code key={key}>{node.text}</code>;
   }
   return (
-    <a
-      key={key}
-      href={node.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-accent underline underline-offset-2"
-    >
+    <a key={key} href={node.href} target="_blank" rel="noopener noreferrer" className="term-link">
       {renderInline(node.children)}
     </a>
   );
@@ -46,7 +36,7 @@ function renderBlock(key: string, block: MarkdownBlock): ReactNode {
   }
   if (block.kind === "heading") {
     return (
-      <p key={key} className="mt-3 font-semibold text-text first:mt-0">
+      <p key={key} className="mt-2 font-semibold first:mt-0">
         {renderInline(block.children)}
       </p>
     );
@@ -58,20 +48,8 @@ function renderBlock(key: string, block: MarkdownBlock): ReactNode {
       </pre>
     );
   }
-  const items = withKeys(block.items, describe).map(([itemKey, item]) => (
-    <li key={itemKey} className="pl-1">
-      {renderInline(item)}
-    </li>
-  ));
-  return block.ordered ? (
-    <ol key={key} className="list-decimal pl-5 marker:text-faint">
-      {items}
-    </ol>
-  ) : (
-    <ul key={key} className="list-disc pl-5 marker:text-accent">
-      {items}
-    </ul>
-  );
+  const items = withKeys(block.items, describe).map(([itemKey, item]) => <li key={itemKey}>{renderInline(item)}</li>);
+  return block.ordered ? <ol key={key}>{items}</ol> : <ul key={key}>{items}</ul>;
 }
 
 export const Markdown = memo(function Markdown({ text }: { readonly text: string }) {

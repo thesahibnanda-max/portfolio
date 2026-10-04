@@ -1,7 +1,6 @@
-import type { KeyboardEvent, RefObject } from "react";
+import { type KeyboardEvent, type RefObject, useLayoutEffect } from "react";
 import type { Suggestion } from "../../../lib/cli/autocomplete";
 
-const MAX_ROWS = 6;
 export const MAX_INPUT_CHARS = 500;
 
 interface PromptProps {
@@ -17,6 +16,14 @@ interface PromptProps {
   readonly onHover: (index: number) => void;
 }
 
+function fitHeight(textarea: HTMLTextAreaElement): void {
+  if (CSS.supports("field-sizing", "content")) {
+    return;
+  }
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
 export function Prompt({
   value,
   ghost,
@@ -30,36 +37,20 @@ export function Prompt({
   onHover,
 }: PromptProps) {
   const isMenuOpen = suggestions.length > 0;
-  const rows = Math.min(MAX_ROWS, value.split("\n").length);
+
+  useLayoutEffect(() => {
+    if (inputRef.current !== null && value !== undefined) {
+      fitHeight(inputRef.current);
+    }
+  }, [inputRef, value]);
+
   return (
-    <div className="relative">
-      {isMenuOpen && (
-        <div id="term-menu" role="listbox" aria-label="Suggestions" className="term-menu">
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={suggestion.value}
-              id={`term-option-${index}`}
-              role="option"
-              tabIndex={-1}
-              aria-selected={index === selected}
-              className="term-option"
-              onMouseDown={(event) => {
-                event.preventDefault();
-                onPick(suggestion);
-              }}
-              onMouseEnter={() => onHover(index)}
-            >
-              <span className={index === selected ? "text-accent" : "text-text"}>{suggestion.label}</span>
-              <span className="min-w-0 flex-1 truncate text-right text-xs text-faint">{suggestion.detail}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="flex items-start gap-2">
-        <span className={`select-none pt-px ${busy ? "text-faint" : "text-accent"}`} aria-hidden="true">
-          ❯
+    <div>
+      <div className="term-box" data-busy={busy ? "" : undefined}>
+        <span className={busy ? "text-faint" : "text-muted"} aria-hidden="true">
+          &gt;
         </span>
-        <div className="relative min-w-0 flex-1">
+        <div className="term-field">
           <div className="term-ghost" aria-hidden="true">
             {value === "" ? (
               !busy && <span className="block truncate text-faint">Ask anything, or type / for commands</span>
@@ -77,7 +68,7 @@ export function Prompt({
             id="term-input"
             ref={inputRef}
             value={value}
-            rows={rows}
+            rows={1}
             maxLength={MAX_INPUT_CHARS}
             spellCheck={false}
             autoCapitalize="off"
@@ -89,12 +80,34 @@ export function Prompt({
             aria-controls="term-menu"
             aria-autocomplete="list"
             aria-activedescendant={isMenuOpen ? `term-option-${selected}` : undefined}
-            className="term-input relative"
+            className="term-input"
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
           />
         </div>
       </div>
+      {isMenuOpen && (
+        <div id="term-menu" role="listbox" aria-label="Suggestions" className="term-menu">
+          {suggestions.map((suggestion, index) => (
+            <div
+              key={suggestion.value}
+              id={`term-option-${index}`}
+              role="option"
+              tabIndex={-1}
+              aria-selected={index === selected}
+              className="term-option"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                onPick(suggestion);
+              }}
+              onMouseEnter={() => onHover(index)}
+            >
+              <span className="truncate">{suggestion.label}</span>
+              <span className={`truncate ${index === selected ? "" : "text-faint"}`}>{suggestion.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

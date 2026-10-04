@@ -58,11 +58,13 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
   const streamTurn = useCallback(
     async (question: string, id: string, signal: AbortSignal, mayRenewSession: boolean): Promise<void> => {
       const api = getChatApi();
+      let createdChatId: string | null = null;
+      let completed = false;
       try {
         let chatId = stateRef.current.chatId;
         if (chatId === null) {
           chatId = (await api.createChat(chatTitleFrom(question), "cli")).chat_id;
-          dispatch({ type: "chat-changed", chatId });
+          createdChatId = chatId;
         }
         const events = await api.streamAgentMessage(chatId, question, signal);
         for await (const event of events) {
@@ -71,6 +73,8 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
           } else if (event.type === "token") {
             dispatch({ type: "answer-token", id, text: event.text });
           } else if (event.type === "done") {
+            completed = true;
+            dispatch({ type: "chat-changed", chatId: event.reply.chat.chat_id });
             dispatch({
               type: "answer-completed",
               id,
@@ -88,15 +92,17 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
       } catch (cause) {
         if (signal.aborted) {
           dispatch({ type: "answer-ended", id, status: "stopped", note: STOPPED_NOTE, at: Date.now() });
-          return;
-        }
-        if (cause instanceof ApiError && cause.isSessionExpired && mayRenewSession) {
+        } else if (cause instanceof ApiError && cause.isSessionExpired && mayRenewSession) {
           await api.renewSession();
           dispatch({ type: "chat-changed", chatId: null });
           await streamTurn(question, id, signal, false);
-          return;
+        } else {
+          fail(id, cause);
         }
-        fail(id, cause);
+      } finally {
+        if (createdChatId !== null && !completed) {
+          void discardChat(createdChatId);
+        }
       }
     },
     [dispatch, fail, stateRef],
@@ -172,19 +178,11 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
     }
   }, [dispatch, print, stateRef]);
 
-  const openChat = useCallback(
-    async (index: number) => {
-      const summary = listedRef.current[index - 1];
-      if (summary === undefined) {
-        print({
-          kind: "output",
-          blocks: [error(`No conversation #${index}.`), hint("Run /history first, then /open <n>.")],
-        });
-        return;
-      }
+  const openChatById = useCallback(
+    async (chatId: string) => {
       dispatch({ type: "busy-changed", busy: true });
       try {
-        const chat = await getChatApi().getChat(summary.chat_id);
+        const chat = await getChatApi().getChat(chatId);
         const at = Date.now();
         const entries: Entry[] = chat.messages.map((message) =>
           message.role === "user"
@@ -223,7 +221,30 @@ export function useAgent(dispatch: Dispatch<TerminalAction>, stateRef: RefObject
     [dispatch, print],
   );
 
-  return { ask, stop, listChats, openChat };
+  const openChat = useCallback(
+    async (index: number) => {
+      const summary = listedRef.current[index - 1];
+      if (summary === undefined) {
+        print({
+          kind: "output",
+          blocks: [error(`No conversation #${index}.`), hint("Run /history first, then /open <n>.")],
+        });
+        return;
+      }
+      await openChatById(summary.chat_id);
+    },
+    [openChatById, print],
+  );
+
+  return { ask, stop, listChats, openChat, openChatById };
+}
+
+async function discardChat(chatId: string): Promise<void> {
+  try {
+    await getChatApi().deleteChat(chatId);
+  } catch (cause) {
+    console.warn("An empty conversation could not be removed", cause);
+  }
 }
 
 function noticeMessage(cause: unknown): string {
