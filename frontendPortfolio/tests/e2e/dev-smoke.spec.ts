@@ -17,7 +17,7 @@ test("the chat and the terminal load on the dev server", async ({ page }) => {
   await expect(dialog).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Control+k");
   await expect(dialog).toBeVisible();
 
   await page.goto("/cli");

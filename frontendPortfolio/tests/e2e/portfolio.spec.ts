@@ -45,7 +45,7 @@ test("streams an answer with source chips from the palette", async ({ page }) =>
   await api.install(page);
   await page.goto("/");
 
-  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "What's his Codeforces peak rating?" }).click();
@@ -74,7 +74,7 @@ test("shows a countdown when rate limited", async ({ page }) => {
   await new MockApi({ rateLimitStream: true }).install(page);
   await page.goto("/");
 
-  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Your question").fill("hi");
   await dialog.getByRole("button", { name: "Send" }).click();
@@ -89,7 +89,7 @@ test("stop aborts a running answer and Escape closes the chat", async ({ page })
   await api.install(page);
   await page.goto("/");
 
-  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Your question").fill("hi");
   await dialog.getByLabel("Your question").press("Enter");
@@ -101,14 +101,14 @@ test("stop aborts a running answer and Escape closes the chat", async ({ page })
   await expect(dialog).toBeHidden();
 });
 
-test.describe("reduced motion", () => {
+test.describe("reduced motion preference", () => {
   test.use({ reducedMotion: "reduce" });
 
-  test("shows content immediately without animation", async ({ page }) => {
+  test("still animates when the OS asks for reduced motion", async ({ page }) => {
     await new MockApi().install(page);
     await page.goto("/");
-    await expect(page.locator("html")).toHaveClass(/reduced-motion/);
+    await expect(page.locator("html")).not.toHaveClass(/reduced-motion/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("opacity", "1");
-    await expect(page.locator("html")).not.toHaveClass(/lenis/);
+    await expect(page.locator("html")).toHaveClass(/lenis/);
   });
 });

@@ -4,19 +4,19 @@ import { startCopyButtons } from "./copy";
 import { startCountUps } from "./countUp";
 import { startNavMenu } from "./navMenu";
 import { startReveals } from "./reveal";
+import { startShortcutLabels } from "./shortcut";
 import { startSmoothScroll } from "./smoothScroll";
 import { startSpotlights } from "./spotlight";
 
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-startReveals(reducedMotion);
-startCountUps(reducedMotion);
+startReveals();
+startCountUps();
 startSpotlights();
 startCopyButtons();
 startChatLauncher();
 startNavMenu();
 startContactLauncher();
-startSmoothScroll(reducedMotion);
+startSmoothScroll();
+startShortcutLabels();
 
 function startDataRefresh(): void {
   void import("./liveStats").then((module) => module.startLiveStats());

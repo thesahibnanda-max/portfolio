@@ -20,8 +20,8 @@ export function animateCount(element: HTMLElement, target: number, decimals: num
   requestAnimationFrame(step);
 }
 
-export function startCountUps(reducedMotion: boolean): void {
-  if (reducedMotion || !("IntersectionObserver" in window)) {
+export function startCountUps(): void {
+  if (!("IntersectionObserver" in window)) {
     return;
   }
   const observer = new IntersectionObserver(

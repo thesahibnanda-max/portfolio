@@ -56,17 +56,6 @@
     outline-offset: 3px;
     border-radius: 6px;
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
 }
 
 @layer components {
@@ -190,8 +179,7 @@
     transition-delay: calc(var(--reveal-index, 0) * 60ms);
   }
 
-  .no-js [data-reveal],
-  .reduced-motion [data-reveal] {
+  .no-js [data-reveal] {
     opacity: 1;
     transform: none;
     filter: none;
