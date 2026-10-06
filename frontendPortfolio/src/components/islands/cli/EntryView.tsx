@@ -33,10 +33,7 @@ function Spinner({
   const verb = VERBS[Math.floor(elapsed / VERB_MS) % VERBS.length];
   return (
     <p className="term-bullet mt-[0.9em] text-accent" role="status">
-      <span aria-hidden="true">
-        <span className="motion-reduce:hidden">{animated ? frame : "✻"}</span>
-        <span className="hidden motion-reduce:inline">✻</span>
-      </span>
+      <span aria-hidden="true">{animated ? frame : "✻"}</span>
       <span>
         {verb}…{" "}
         <span className="text-faint">

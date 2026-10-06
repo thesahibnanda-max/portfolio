@@ -44,9 +44,6 @@ const personJsonLd = JSON.stringify({
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
     <script is:inline>
       document.documentElement.classList.remove("no-js");
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        document.documentElement.classList.add("reduced-motion");
-      }
     </script>
     <script type="application/ld+json" set:html={personJsonLd} />
     {

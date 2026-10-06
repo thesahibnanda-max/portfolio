@@ -31,9 +31,6 @@ const canonical = Astro.site === undefined ? undefined : new URL(Astro.url.pathn
     <link rel="preload" href={monoLatin} as="font" type="font/woff2" crossorigin />
     <script is:inline>
       document.documentElement.classList.remove("no-js");
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        document.documentElement.classList.add("reduced-motion");
-      }
     </script>
   </head>
   <body class="overflow-hidden bg-bg text-text">

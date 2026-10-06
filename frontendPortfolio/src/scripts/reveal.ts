@@ -1,6 +1,6 @@
-export function startReveals(reducedMotion: boolean): void {
+export function startReveals(): void {
   const targets = document.querySelectorAll<HTMLElement>("[data-reveal]");
-  if (reducedMotion || !("IntersectionObserver" in window)) {
+  if (!("IntersectionObserver" in window)) {
     for (const target of targets) {
       target.classList.add("is-revealed");
     }

@@ -1,3 +1,6 @@
+import { isShortcutModifier } from "../lib/platform";
+import { currentPlatform } from "./shortcut";
+
 type ChatModule = typeof import("../components/islands/chat/mount");
 
 let loading: Promise<ChatModule> | null = null;
@@ -30,8 +33,9 @@ function reportFailure(error: unknown): void {
 }
 
 export function startChatLauncher(): void {
+  const platform = currentPlatform();
   window.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    if (isShortcutModifier(platform, event) && !event.altKey && event.key.toLowerCase() === "k") {
       event.preventDefault();
       openChat(true).catch(reportFailure);
     }

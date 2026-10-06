@@ -101,9 +101,8 @@ const FRAMES_TO_SAMPLE = 30;
 const REDUCED_DPR_SCALE = 0.5;
 
 export function startHeroShader(canvas: HTMLCanvasElement): void {
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const begin = (): void => {
-    void mountShader(canvas, reducedMotion).catch((error: unknown) => {
+    void mountShader(canvas).catch((error: unknown) => {
       console.warn("Hero shader unavailable; showing the static gradient", error);
     });
   };
@@ -121,15 +120,14 @@ export function startHeroShader(canvas: HTMLCanvasElement): void {
   }
 }
 
-async function mountShader(canvas: HTMLCanvasElement, reducedMotion: boolean): Promise<void> {
+async function mountShader(canvas: HTMLCanvasElement): Promise<void> {
   const { Renderer, Program, Mesh, Triangle } = await import("ogl");
   const baseDpr = Math.min(window.devicePixelRatio, MAX_DPR) * 0.75;
   const renderer = new Renderer({ canvas, dpr: baseDpr, alpha: false });
   const gl = renderer.gl;
-  if (isSoftwareRenderer(gl)) {
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
-    canvas.hidden = true;
-    return;
+  const software = isSoftwareRenderer(gl);
+  if (software) {
+    renderer.dpr = baseDpr * REDUCED_DPR_SCALE;
   }
 
   const uniforms = {
@@ -161,19 +159,12 @@ async function mountShader(canvas: HTMLCanvasElement, reducedMotion: boolean): P
   });
 
   canvas.classList.add("opacity-0", "transition-opacity", "duration-[2000ms]");
-  if (reducedMotion) {
-    uniforms.uTime.value = 40;
-    renderer.render({ scene: mesh });
-    canvas.classList.remove("opacity-0");
-    return;
-  }
-
   let visible = true;
   let frameId = 0;
   let sampled = 0;
   let lastFrameAt = 0;
   let slowFrames = 0;
-  let degraded = false;
+  let degraded = software;
   const startedAt = performance.now();
   const adapt = (now: number): boolean => {
     if (lastFrameAt !== 0 && sampled < FRAMES_TO_SAMPLE) {
